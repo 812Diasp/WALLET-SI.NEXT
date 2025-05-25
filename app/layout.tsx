@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/app/components/Navbar/Navbar";
+import Footer from "@/app/components/Footer/Footer";
+import {Providers} from "@/app/providers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,10 +36,13 @@ export default function RootLayout({
     <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
     >
-    <Navbar />
-    {children}
-    <script defer src="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.js"></script>
+    <Providers>
+      <Navbar />
+      {children}
+      <Footer/>
+    </Providers>
 
+    <script defer src="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.js"></script>
     </body>
     </html>
   );

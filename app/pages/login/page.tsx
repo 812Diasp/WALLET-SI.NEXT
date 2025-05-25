@@ -1,9 +1,12 @@
 'use client';
-import { useState } from 'react';
+import {useEffect, useState} from 'react';
 import Head from 'next/head';
 import { signIn } from 'next-auth/react';
 import Image from 'next/image';
-
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch, RootState } from '@/app/store';
+import { setUser, setToken, setLoading, setError } from '@/app/store/userSlice';
+import { useRouter } from 'next/navigation';
 export default function LoginPage() {
     const [isLogin, setIsLogin] = useState(true);
     const [email, setEmail] = useState('');
@@ -12,15 +15,87 @@ export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const dispatch = useDispatch<AppDispatch>();
+    const { isLoading } = useSelector((state: RootState) => state.user);
+    const router = useRouter();
+    // Проверяем токен при загрузке компонента
+    useEffect(() => {
+        const checkAuth = async () => {
+            const storedToken = localStorage.getItem('authToken');
+            if (storedToken) {
+                try {
+                    const response = await fetch('http://localhost:8001/auth/verify-token', {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${storedToken}`,
+                            'Content-Type': 'application/json',
+                        },
+                    });
+
+                    if (response.ok) {
+                        dispatch(setToken(storedToken));
+                        const userData = await response.json();
+                        dispatch(setUser({ email: userData.user }));
+                        router.push('/'); // Перенаправляем на главную
+                    } else {
+                        localStorage.removeItem('authToken');
+                    }
+                } catch (error) {
+                    localStorage.removeItem('authToken');
+                }
+            }
+        };
+
+        checkAuth();
+    }, [dispatch, router]);
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!isLogin && password !== confirmPassword) {
             alert('Пароли не совпадают');
             return;
         }
-        console.log({ email, password, rememberMe });
-    };
 
+        dispatch(setLoading(true));
+
+        try {
+            const url = isLogin
+                ? 'http://localhost:8001/auth/token'
+                : 'http://localhost:8001/auth/register';
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email, password }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.detail || 'Ошибка запроса');
+            }
+
+            if (isLogin) {
+                dispatch(setToken(data.access_token));
+                dispatch(setUser({ email }));
+                localStorage.setItem('authToken', data.access_token);
+
+                // Перенаправляем на главную после успешного входа
+                router.push('/');
+            } else {
+                alert('Регистрация прошла успешно!');
+                setIsLogin(true);
+            }
+        } catch (error) {
+            // dispatch(setError(error.message));
+            // @ts-ignore
+            alert(error.message);
+        } finally {
+            dispatch(setLoading(false));
+        }
+    };
     const toggleForm = () => {
         setIsLogin((prev) => !prev);
         setEmail('');
@@ -187,8 +262,9 @@ export default function LoginPage() {
                     <button
                         type="submit"
                         className="w-full mt-4 px-4 py-2 text-white bg-gray-500 hover:bg-gray-600 rounded-lg"
+                        disabled={isLoading}
                     >
-                        {isLogin ? 'Войти' : 'Зарегистрироваться'}
+                        {isLoading ? 'Загрузка...' : isLogin ? 'Войти' : 'Зарегистрироваться'}
                     </button>
 
                     {/* Registration Link */}

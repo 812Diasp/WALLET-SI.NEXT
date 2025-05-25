@@ -9,6 +9,7 @@ import {
     Tooltip,
     ResponsiveContainer,
 } from "recharts";
+import { useAppSelector } from "@/hooks";
 
 // Определяем интерфейс для данных графика
 interface ChartData {
@@ -20,24 +21,45 @@ interface ChartData {
 export default function Home() {
     const [data, setData] = useState<ChartData[]>([]);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
+    const theme = useAppSelector((state) => state.theme.mode);
+    const [isTransitioning, setIsTransitioning] = useState(false);
+    const transitionRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Эффект для плавного перехода между темами
+    useEffect(() => {
+        setIsTransitioning(true);
+
+        if (transitionRef.current) {
+            clearTimeout(transitionRef.current);
+        }
+
+        transitionRef.current = setTimeout(() => {
+            setIsTransitioning(false);
+        }, 500); // Длительность анимации в мс
+
+        return () => {
+            if (transitionRef.current) {
+                clearTimeout(transitionRef.current);
+            }
+        };
+    }, [theme]);
 
     // Генерация данных для графика
     useEffect(() => {
         const generateData = (): ChartData[] => {
             const newData: ChartData[] = [];
             // Базовые значения (средние показатели)
-            let prevExpenses = 85; // Средние ежедневные расходы ($2,500 / 30 дней)
-            let prevIncome = 120;  // Средние ежедневные доходы ($3,500 / 30 дней)
+            let prevExpenses = 85;
+            let prevIncome = 120;
 
             for (let i = 0; i < 10; i++) {
-                // Добавляем небольшие колебания к базовым значениям
                 const expenses = Math.max(
-                    60, // Минимальные расходы
-                    prevExpenses + (Math.random() * 30 - 10) // Колебания ± $10
+                    60,
+                    prevExpenses + (Math.random() * 30 - 10)
                 );
                 const income = Math.max(
-                    100, // Минимальные доходы
-                    prevIncome + (Math.random() * 40 - 10) // Колебания ± $15
+                    100,
+                    prevIncome + (Math.random() * 40 - 10)
                 );
 
                 newData.push({
@@ -46,7 +68,6 @@ export default function Home() {
                     income: Math.round(income),
                 });
 
-                // Обновляем предыдущие значения для следующей итерации
                 prevExpenses = expenses;
                 prevIncome = income;
             }
@@ -56,7 +77,7 @@ export default function Home() {
         setData(generateData());
     }, []);
 
-    // Анимация фона
+    // Анимация фона с учетом темы
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
@@ -70,8 +91,8 @@ export default function Home() {
         canvas.height = height;
 
         const lines: number[][] = [];
-        const lineCount = 2; // Количество линий
-        const pointsPerLine = width < 768 ? 15 : 40; // Меньше точек на мобильных устройствах
+        const lineCount = 2;
+        const pointsPerLine = width < 768 ? 15 : 40;
 
         // Инициализация данных для линий
         for (let i = 0; i < lineCount; i++) {
@@ -85,22 +106,28 @@ export default function Home() {
         let frame = 0;
 
         const animate = () => {
+            // Прозрачность зависит от состояния перехода
+            const opacity = isTransitioning ? 0.1 : 0.3;
+
             ctx.clearRect(0, 0, width, height);
 
-            // Рисуем каждую линию
+            // Рисуем каждую линию с учетом темы
             lines.forEach((line, lineIndex) => {
                 ctx.beginPath();
-                ctx.strokeStyle = `hsla(${lineIndex === 0 ? 200 : 340}, 60%, 60%, 0.3)`; // Более тусклые цвета
-                ctx.lineWidth = width < 768 ? 0.5 : 1; // Тоньше линии на мобильных устройствах
+
+                // Цвета линий в зависимости от темы
+                const hue = theme === 'dark'
+                    ? (lineIndex === 0 ? 200 : 340)
+                    : (lineIndex === 0 ? 210 : 350);
+
+                ctx.strokeStyle = `hsla(${hue}, 60%, 60%, ${opacity})`;
+                ctx.lineWidth = width < 768 ? 0.5 : 1;
 
                 for (let i = 0; i < pointsPerLine; i++) {
                     const x = (i / pointsPerLine) * width;
                     const y = line[i];
 
-                    // Обновляем позицию точки (меньшая амплитуда)
                     line[i] += Math.sin((frame + i * 10) / 100) * 0.5;
-
-                    // Ограничиваем значение y границами экрана
                     line[i] = Math.max(0, Math.min(height, line[i]));
 
                     if (i === 0) {
@@ -119,14 +146,12 @@ export default function Home() {
 
         animate();
 
-        // Обработчик изменения размеров окна
         const handleResize = () => {
             width = window.innerWidth;
             height = window.innerHeight;
             canvas.width = width;
             canvas.height = height;
 
-            // Пересчитываем координаты линий
             lines.forEach((line) => {
                 for (let i = 0; i < pointsPerLine; i++) {
                     line[i] = Math.random() * height;
@@ -136,15 +161,23 @@ export default function Home() {
 
         window.addEventListener("resize", handleResize);
 
-        // Очистка при размонтировании компонента
         return () => {
             window.removeEventListener("resize", handleResize);
             cancelAnimationFrame(frame);
         };
-    }, []);
+    }, [theme, isTransitioning]);
+
+    // Цвета для темной и светлой темы
+    const bgColor = theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50';
+    const textColor = theme === 'dark' ? 'text-white' : 'text-gray-900';
+    const secondaryTextColor = theme === 'dark' ? 'text-gray-400' : 'text-gray-600';
+    const cardBgColor = theme === 'dark' ? 'bg-gray-800' : 'bg-white';
+    const cardHoverColor = theme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-100';
+    const sectionBgColor = theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100';
+    const gridColor = theme === 'dark' ? '#4B5563' : '#E5E7EB';
 
     return (
-        <div className="min-h-screen bg-gray-900 text-white relative overflow-hidden">
+        <div className={`min-h-screen ${bgColor} ${textColor} relative overflow-hidden transition-colors duration-500 opacity-100`}>
             {/* Canvas для фоновой анимации */}
             <canvas
                 ref={canvasRef}
@@ -153,9 +186,9 @@ export default function Home() {
             ></canvas>
 
             {/* Header Section */}
-            <header className="relative z-10 py-8 px-4 text-center">
+            <header className={`relative z-10 py-8 px-4 text-center transition-opacity duration-500 opacity-100`}>
                 <h1 className="text-4xl font-bold mb-4">Welcome to SI.NEXT</h1>
-                <p className="text-lg text-gray-400">
+                <p className={`text-lg ${secondaryTextColor}`}>
                     Your personal finance and investment tracker.
                 </p>
 
@@ -166,14 +199,27 @@ export default function Home() {
                             data={data}
                             margin={{ top: 20, right: 30, left: 20, bottom: 50 }}
                         >
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="day" stroke="#8884d8" angle={-45} dx={-10} dy={10} />
-                            <YAxis stroke="#8884d8" />
-                            <Tooltip />
+                            <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                            <XAxis
+                                dataKey="day"
+                                stroke={theme === 'dark' ? '#8884d8' : '#4B5563'}
+                                angle={-45}
+                                dx={-10}
+                                dy={10}
+                            />
+                            <YAxis stroke={theme === 'dark' ? '#8884d8' : '#4B5563'} />
+                            <Tooltip
+                                contentStyle={{
+                                    backgroundColor: theme === 'dark' ? '#1F2937' : '#FFFFFF',
+                                    borderColor: theme === 'dark' ? '#4B5563' : '#E5E7EB',
+                                    borderRadius: '0.5rem',
+                                    color: theme === 'dark' ? '#FFFFFF' : '#111827'
+                                }}
+                            />
                             <Line
                                 type="monotone"
                                 dataKey="expenses"
-                                stroke="#f87171" // Красная линия для расходов
+                                stroke="#f87171"
                                 strokeWidth={2}
                                 dot={{ fill: "#f87171", r: 5 }}
                                 activeDot={{ r: 8 }}
@@ -181,7 +227,7 @@ export default function Home() {
                             <Line
                                 type="monotone"
                                 dataKey="income"
-                                stroke="#34d399" // Зеленая линия для доходов
+                                stroke="#34d399"
                                 strokeWidth={2}
                                 dot={{ fill: "#34d399", r: 5 }}
                                 activeDot={{ r: 8 }}
@@ -192,46 +238,47 @@ export default function Home() {
             </header>
 
             {/* Hero Section */}
-            <section className="relative z-10 py-12 px-4">
-                <div className="max-w-4xl mx-auto bg-gray-800 rounded-lg shadow-lg p-6">
+            <section className={`relative z-10 py-12 px-4 transition-opacity duration-500 opacity-100`}>
+                <div className={`max-w-4xl mx-auto ${cardBgColor} rounded-lg shadow-lg p-6 transition-colors duration-500`}>
                     <h2 className="text-2xl font-semibold mb-4">Your Financial Overview</h2>
-                    <p className="text-gray-400">
+                    <p className={secondaryTextColor}>
                         Monitor your expenses and investments in real-time.
                     </p>
                 </div>
             </section>
 
             {/* Features Section */}
-            <section className="relative z-10 py-12 px-4 bg-gray-800">
+            <section className={`relative z-10 py-12 px-4 ${sectionBgColor} transition-colors duration-500`}>
                 <div className="max-w-4xl mx-auto text-center">
                     <h2 className="text-3xl font-bold mb-8">Why Choose SI.NEXT?</h2>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                        <div className="bg-gray-700 rounded-lg p-6 hover:bg-gray-600 transition duration-300">
-                            <h3 className="text-xl font-semibold mb-2">Track Expenses</h3>
-                            <p className="text-gray-400">
-                                Easily monitor your daily expenses and categorize them.
-                            </p>
-                        </div>
-                        <div className="bg-gray-700 rounded-lg p-6 hover:bg-gray-600 transition duration-300">
-                            <h3 className="text-xl font-semibold mb-2">Investment Insights</h3>
-                            <p className="text-gray-400">
-                                Get detailed insights into your investments and portfolio growth.
-                            </p>
-                        </div>
-                        <div className="bg-gray-700 rounded-lg p-6 hover:bg-gray-600 transition duration-300">
-                            <h3 className="text-xl font-semibold mb-2">Secure & Reliable</h3>
-                            <p className="text-gray-400">
-                                Your data is safe with us. We use industry-standard encryption.
-                            </p>
-                        </div>
+                        {[
+                            {
+                                title: "Track Expenses",
+                                description: "Easily monitor your daily expenses and categorize them."
+                            },
+                            {
+                                title: "Investment Insights",
+                                description: "Get detailed insights into your investments and portfolio growth."
+                            },
+                            {
+                                title: "Secure & Reliable",
+                                description: "Your data is safe with us. We use industry-standard encryption."
+                            }
+                        ].map((feature, index) => (
+                            <div
+                                key={index}
+                                className={`${cardBgColor} rounded-lg p-6 ${cardHoverColor} transition-all duration-300`}
+                            >
+                                <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
+                                <p className={secondaryTextColor}>
+                                    {feature.description}
+                                </p>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </section>
-
-            {/* Footer Section */}
-            <footer className="relative z-10 py-8 px-4 bg-gray-900 text-center text-gray-400">
-                <p>&copy; 2025 SI.NEXT All rights reserved.</p>
-            </footer>
         </div>
     );
 }
