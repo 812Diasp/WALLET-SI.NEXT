@@ -112,7 +112,7 @@ export default function ChatAi() {
     return (
         <>
             {/* Основной контент — чат */}
-            <div className={`min-h-screen ${bgColor} ${textColor} pt-6 pb-20 transition-colors duration-300`}>
+            <div className={`min-h-screen ${bgColor} ${textColor} pt-6 pb-20 transition-colors duration-300 mt-12 md:mt-25`}>
                 <div className={`max-w-3xl mx-auto ${cardBgColor} rounded-xl shadow-lg overflow-hidden transition-colors duration-300`}>
                     <div className={`p-5 border-b ${borderColor}`}>
                         <h1 className="text-2xl font-bold flex items-center gap-2">

@@ -1,10 +1,10 @@
 'use client';
 
 import { Provider } from 'react-redux';
-import { store } from '../app/store/index';
+import { store } from '@/app/store';
 import { useEffect } from 'react';
-import {setTheme} from '../app/store/themeSlice'
-import { useAppDispatch } from '../hooks'
+import {setTheme} from '@/app/store/themeSlice'
+import { useAppDispatch } from '@/hooks'
 // Компонент для инициализации темы
 function ThemeInitializer() {
     const dispatch = useAppDispatch();

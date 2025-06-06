@@ -56,7 +56,7 @@ export default function Navbar() {
     };
 
     return (
-        <nav className={`border-gray-200 ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'} z-50`}>
+        <nav className={`fixed top-0 w-full z-50 border-gray-200 ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'} shadow-md`}>
             {/* Контейнер с логотипом, UserDropdown и бургер-меню */}
             <div className="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
                 {/* Логотип и UserDropdown для мобильных устройств */}
@@ -213,7 +213,7 @@ export default function Navbar() {
                         <li>
                             <Link
                                 href="/"
-                                className={`block py-2 px-3 rounded-sm md:hover:bg-transparent md:p-0 ${theme === 'dark' ? 'text-white hover:text-blue-500' : 'text-gray-900 hover:text-blue-700'}`}
+                                className={`block py-2 px-3 rounded-sm md:hover:bg-transparent md:p-0 ${theme === 'dark' ? 'text-white hover:text-blue-500' : 'text-gray-900 hover:text-blue-700'} mb-3 text-base`}
                                 aria-current="page"
                                 onClick={closeMobileMenu}
                             >
@@ -223,7 +223,7 @@ export default function Navbar() {
                         <li>
                             <Link
                                 href="/pages/about"
-                                className={`block py-2 px-3 rounded-sm md:hover:bg-transparent md:p-0 ${theme === 'dark' ? 'text-white hover:text-blue-500' : 'text-gray-900 hover:text-blue-700'}`}
+                                className={`block py-2 px-3 rounded-sm md:hover:bg-transparent md:p-0 ${theme === 'dark' ? 'text-white hover:text-blue-500' : 'text-gray-900 hover:text-blue-700'} mb-3 text-base`}
                                 onClick={closeMobileMenu}
                             >
                                 About
@@ -232,7 +232,7 @@ export default function Navbar() {
                         <li>
                             <Link
                                 href="/pages/wallet"
-                                className={`block py-2 px-3 rounded-sm md:hover:bg-transparent md:p-0 ${theme === 'dark' ? 'text-white hover:text-blue-500' : 'text-gray-900 hover:text-blue-700'}`}
+                                className={`block py-2 px-3 rounded-sm md:hover:bg-transparent md:p-0 ${theme === 'dark' ? 'text-white hover:text-blue-500' : 'text-gray-900 hover:text-blue-700'} mb-3 text-base`}
                                 onClick={closeMobileMenu}
                             >
                                 Wallet
@@ -241,7 +241,7 @@ export default function Navbar() {
                         <li>
                             <Link
                                 href="/pages/invest"
-                                className={`block py-2 px-3 rounded-sm md:hover:bg-transparent md:p-0 ${theme === 'dark' ? 'text-white hover:text-blue-500' : 'text-gray-900 hover:text-blue-700'}`}
+                                className={`block py-2 px-3 rounded-sm md:hover:bg-transparent md:p-0 ${theme === 'dark' ? 'text-white hover:text-blue-500' : 'text-gray-900 hover:text-blue-700'} mb-3 text-base`}
                                 onClick={closeMobileMenu}
                             >
                                 Investments
@@ -250,7 +250,7 @@ export default function Navbar() {
                         <li>
                             <Link
                                 href="/pages/aiassist"
-                                className={`block py-2 px-3 rounded-sm md:hover:bg-transparent md:p-0 ${theme === 'dark' ? 'text-white hover:text-blue-500' : 'text-gray-900 hover:text-blue-700'}`}
+                                className={`block py-2 px-3 rounded-sm md:hover:bg-transparent md:p-0 ${theme === 'dark' ? 'text-white hover:text-blue-500' : 'text-gray-900 hover:text-blue-700'} mb-3 text-base`}
                                 onClick={closeMobileMenu}
                             >
                                 AI Assistant
@@ -259,7 +259,7 @@ export default function Navbar() {
                         <li>
                             <Link
                                 href="/pages/login"
-                                className={`block py-2 px-3 rounded-sm md:hover:bg-transparent md:p-0 ${theme === 'dark' ? 'text-white hover:text-blue-500' : 'text-gray-900 hover:text-blue-700'}`}
+                                className={`block py-2 px-3 rounded-sm md:hover:bg-transparent md:p-0 ${theme === 'dark' ? 'text-white hover:text-blue-500' : 'text-gray-900 hover:text-blue-700'} mb-3 text-base`}
                                 onClick={closeMobileMenu}
                             >
                                 Sign up / Login
