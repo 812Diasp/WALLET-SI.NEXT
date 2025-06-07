@@ -173,7 +173,7 @@ export default function Home() {
     const demoItems = [
         { link: '/pages/wallet', text: 'Wallet 👛', image: 'https://picsum.photos/600/400?random=1' },
         { link: '/pages/portfolio', text: 'Your portfolio 💼', image: 'https://picsum.photos/600/400?random=2' },
-        { link: '/pages/calc', text: 'Calculators 🖩', image: 'https://picsum.photos/600/400?random=3' },
+        { link: '/pages/calculator/martingale', text: 'Calculators 🖩', image: 'https://picsum.photos/600/400?random=3' },
         { link: '/pages/aiassist', text: 'AI ASSISTANT 🤖 (NEW!)', image: 'https://picsum.photos/600/400?random=4' }
     ];
     // Цвета для темной и светлой темы
