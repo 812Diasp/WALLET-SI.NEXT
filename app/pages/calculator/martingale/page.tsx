@@ -171,10 +171,10 @@ export default function MartingaleCalculator() {
                   animate={{ x: 0, opacity: 1, transition: { delay: 0.1 * i } }}
                   whileHover={{ scale: 1.02 }}
                 >
-                  <div className={`text-lg font-medium ${text}`}>Раунд {i + 1}</div>
-                  <div className={`${text}`}>Ставка: {formatNumber(r.amount)}$</div>
-                  <div className={`${text}`}>Сумма: {formatNumber(r.cumulative)}$</div>
-                  <div className={`${text}`}>Прибыль: {formatNumber(r.profit)}$</div>
+                  <div className={`text-xl font-medium ${text}`}>Раунд {i + 1}</div>
+                  <div className={`${text}`}>Ставка: <span className={'underline'}>{formatNumber(r.amount)}$</span></div>
+                  <div className={`${text}`}>Сумма: <span className={'underline'}>{formatNumber(r.cumulative)}$</span></div>
+                  <div className={`${text}`}>Прибыль: <span className={'underline'}>{formatNumber(r.profit)}$</span></div>
                 </motion.div>
               ))}
             </div>

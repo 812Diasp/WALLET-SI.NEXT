@@ -266,18 +266,18 @@ export default function ChatAi() {
                     padding: 0.75rem 1rem;
                     border: 1px solid;
                     ${theme === 'dark' ?
-                            `color: #e5e7eb;
+                `color: #e5e7eb;
        border-color: #4b5563;` :
-                            `color: #1a1a1a;
+                `color: #1a1a1a;
        border-color: #e2e8f0;`}
                 }
 
                 .markdown-chat-output th {
                     font-weight: 600;
                     ${theme === 'dark' ?
-                            `background-color: #374151;
+                `background-color: #374151;
        color: #ffffff;` :
-                            `background-color: #f1f5f9;
+                `background-color: #f1f5f9;
        color: #1a1a1a;`}
                 }
 
@@ -428,14 +428,14 @@ export default function ChatAi() {
                 .markdown-chat-output th {
                     font-weight: 600;
                     ${theme === 'dark' ?
-                            'background-color: #374151; color: #ffffff;' :
-                            'background-color: #f3f4f6; color: #111827;'}
+                'background-color: #374151; color: #ffffff;' :
+                'background-color: #f3f4f6; color: #111827;'}
                 }
 
                 .markdown-chat-output tr:nth-child(even) {
                     ${theme === 'dark' ?
-                            'background-color: #374151;' :
-                            'background-color: #f9fafb;'}
+                'background-color: #374151;' :
+                'background-color: #f9fafb;'}
                 }
 
                 /* Цитаты */
@@ -445,29 +445,29 @@ export default function ChatAi() {
                     font-style: italic;
                     margin: 1rem 0;
                     ${theme === 'dark' ?
-                            'border-color: #3b82f6; color: #d1d5db;' :
-                            'border-color: #2563eb; color: #4b5563;'}
+                'border-color: #3b82f6; color: #d1d5db;' :
+                'border-color: #2563eb; color: #4b5563;'}
                 }
 
                 /* Блоки кода */
                 .markdown-chat-output pre {
                     ${theme === 'dark' ?
-                            'background-color: #1f2937;' :
-                            'background-color: #f3f4f6;'}
+                'background-color: #1f2937;' :
+                'background-color: #f3f4f6;'}
                     padding: 0.75rem;
                     border-radius: 0.375rem;
                     overflow-x: auto;
                     font-size: 0.875rem;
                     margin: 1rem 0;
                     ${theme === 'dark' ?
-                            'border: 1px solid #374151;' :
-                            'border: 1px solid #e5e7eb;'}
+                'border: 1px solid #374151;' :
+                'border: 1px solid #e5e7eb;'}
                 }
 
                 .markdown-chat-output code {
                     ${theme === 'dark' ?
-                            'background-color: #374151; color: #93c5fd;' :
-                            'background-color: #e5e7eb; color: #dc2626;'}
+                'background-color: #374151; color: #93c5fd;' :
+                'background-color: #e5e7eb; color: #dc2626;'}
                     padding: 0.2em 0.4em;
                     border-radius: 0.25em;
                     font-family: monospace;
