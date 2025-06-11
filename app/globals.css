@@ -7,7 +7,10 @@
 /*  --foreground: #171717;*/
 /*}*/
 
-
+.bg-black-111{
+  background-color: #111;
+  color: white;
+}
 body {
 
 }

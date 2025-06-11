@@ -3,10 +3,7 @@
     height: 100%;
     overflow: hidden;
 }
-.bg-black-111{
-    background-color: #111;
-    color: white;
-}
+
 .bg-black-111:hover{
     background-color: #1c1c1c;
 }

@@ -11,8 +11,8 @@ import {
 } from "recharts";
 import { useAppSelector } from "@/hooks";
 import SpotlightCard from "@/app/components/SpotlightCard/SpotlightCard";
-import FlowingMenu from "@/app/components/Menu/FlowMenu";
 import DecryptedText from "@/app/components/CryptoText/DecryptedText";
+import {DemoMenu} from "@/app/components/DemoMenuCards/DemoMenu";
 
 // Определяем интерфейс для данных графика
 interface ChartData {
@@ -174,7 +174,7 @@ export default function Home() {
         { link: '/pages/wallet', text: 'Wallet 👛', image: 'https://picsum.photos/600/400?random=1' },
         { link: '/pages/portfolio', text: 'Your portfolio 💼', image: 'https://picsum.photos/600/400?random=2' },
         { link: '/pages/calculator', text: 'Calculators 🖩', image: 'https://picsum.photos/600/400?random=3' },
-        { link: '/pages/aiassist', text: 'AI ASSISTANT 🤖 (NEW!)', image: 'https://picsum.photos/600/400?random=4' }
+        { link: '/pages/aiassist', text: 'AI ASSISTANT 🤖', image: 'https://picsum.photos/600/400?random=4' }
     ];
     // Цвета для темной и светлой темы
     const bgColor = theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50';
@@ -359,10 +359,8 @@ export default function Home() {
             </section>
 
 
-            <section className={`justify-center flex ${theme === 'dark' ? 'bg-black-111' : 'bg-gray-100'} p-8 rounded-xl transition-colors duration-300`}>
-                <div style={{ height: '600px', position: 'relative', width: '70%' }}>
-                    <FlowingMenu items={demoItems} theme={theme} />
-                </div>
+            <section className={`justify-center flex ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-100'} p-8 rounded-xl transition-colors duration-300`}>
+                <DemoMenu items={demoItems} theme={theme} />
             </section>
 
         </div>
