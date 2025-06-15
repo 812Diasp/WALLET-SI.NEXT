@@ -60,7 +60,8 @@ export default function CalculatorPage() {
     const secondaryTextColor = theme === 'dark' ? 'text-gray-400' : 'text-gray-600';
 
     return (
-        <div className={`mt-23 text-center min-h-screen ${bgColor} ${textColor} transition-colors duration-500`}>
+        <div className={`mt-23 text-center min-h-screen ${bgColor} ${textColor} transition-colors duration-500 `}>
+            <div className={'max-w-5xl mx-auto'}>
             <div className={'pt-10'}>
                 <h1 className={'text-xl font-medium'}>
                     List of available calculators useful for your finances
@@ -109,6 +110,7 @@ export default function CalculatorPage() {
                     </div>
                     </Link>
                 ))}
+            </div>
             </div>
         </div>
     );

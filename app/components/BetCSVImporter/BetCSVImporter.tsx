@@ -60,13 +60,13 @@ export default function BetCSVImporter({ onImport, theme = 'light' }: BetCSVImpo
 
     const buttonClass = theme === 'dark'
         ? 'bg-green-600 hover:bg-green-700 text-white'
-        : 'bg-green-500 hover:bg-green-600 text-white';
+        : 'bg-green-700 hover:bg-green-600 text-white';
 
     return (
         <div className="mt-4">
             <button
                 onClick={() => fileInputRef.current?.click()}
-                className={`w-full py-2 rounded ${buttonClass}`}
+                className={`w-full py-2 rounded ${buttonClass} `}
             >
                 Импорт из CSV
             </button>

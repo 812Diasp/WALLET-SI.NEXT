@@ -64,7 +64,7 @@ export default function Navbar() {
                     {/* UserDropdown слева */}
                     <UserDropdown />
                     {/* Логотип и текст справа */}
-                    <Link href="/" className="flex items-center" onClick={closeMobileMenu}>
+                    <Link href="/" className="flex items-center modern-gradient" onClick={closeMobileMenu}>
                         <svg
                             className="h-8"
                             width="32px"
@@ -97,27 +97,29 @@ export default function Navbar() {
                                 strokeLinejoin="round"
                             />
                         </svg>
-                        <span className="self-center text-2xl font-semibold whitespace-nowrap">
-                            SI.NEXT
+                        <span className="self-center text-2xl font-semibold whitespace-nowrap modern-gradient">
+                          SI.NEXT
                         </span>
                     </Link>
+
                     {/* Кнопка бургер-меню */}
                     <div className="flex items-center gap-2">
-                        <button
-                            onClick={handleToggleTheme}
-                            className={`p-2 rounded-full ${theme === 'dark' ? 'bg-gray-700 text-yellow-300' : 'bg-gray-200 text-gray-700'}`}
-                            aria-label="Toggle theme"
-                        >
-                            {theme === 'dark' ? (
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clipRule="evenodd" />
-                                </svg>
-                            ) : (
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                    <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
-                                </svg>
-                            )}
-                        </button>
+                        {/*{кнопка темы на мобликах (если она есть то лого неровное)}*/}
+                        {/*<button*/}
+                        {/*    onClick={handleToggleTheme}*/}
+                        {/*    className={`p-2 rounded-full ${theme === 'dark' ? 'bg-gray-700 text-yellow-300' : 'bg-gray-200 text-gray-700'}`}*/}
+                        {/*    aria-label="Toggle theme"*/}
+                        {/*>*/}
+                        {/*    {theme === 'dark' ? (*/}
+                        {/*        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">*/}
+                        {/*            <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clipRule="evenodd" />*/}
+                        {/*        </svg>*/}
+                        {/*    ) : (*/}
+                        {/*        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">*/}
+                        {/*            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />*/}
+                        {/*        </svg>*/}
+                        {/*    )}*/}
+                        {/*</button>*/}
                         <button
                             type="button"
                             className={`inline-flex items-center p-2 w-10 h-10 justify-center text-sm rounded-lg focus:outline-none focus:ring-2 ${theme === 'dark' ? 'text-gray-400 hover:bg-gray-700 focus:ring-gray-600' : 'text-gray-500 hover:bg-gray-100 focus:ring-gray-200'}`}
@@ -179,7 +181,7 @@ export default function Navbar() {
                                 strokeLinejoin="round"
                             />
                         </svg>
-                        <span className="self-center text-2xl font-semibold whitespace-nowrap">
+                        <span className="self-center text-2xl font-semibold whitespace-nowrap modern-gradient">
                             SI.NEXT
                         </span>
                     </Link>

@@ -11,9 +11,26 @@
   background-color: #111;
   color: white;
 }
-body {
 
+@keyframes gradientMove {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
+
+.modern-gradient {
+  background: linear-gradient(270deg,
+  #00f0ff, /* Светло-бирюзовый */
+  #66f2d5,
+  #0056ca, /* Розовый (iOS/Apple UI акцент) */ #1d00a1, /* Глубокий розовый */
+  #66f2f1  /* Лёгкий переход обратно к бирюзе */
+  );
+  background-size: 400% 400%;
+  animation: gradientMove 8s ease-in-out infinite;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

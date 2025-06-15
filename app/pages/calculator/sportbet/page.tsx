@@ -92,7 +92,7 @@ export default function SportBetCalculatorPage() {
 
     const bg = theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900';
     const cardBg = theme === 'dark' ? 'bg-gray-800' : 'bg-white';
-    const textColor = theme === 'dark' ? 'text-black' : 'text-white';
+    const textColor = theme === 'dark' ? 'text-white' : 'text-black';
 
     return (
         <div className={`min-h-screen p-6 transition-colors duration-500 mt-5 ${bg}`}>
@@ -127,8 +127,8 @@ export default function SportBetCalculatorPage() {
                             onChange={e => setResult(e.target.value as any)}
                             className={`w-full p-2 border rounded ${textColor}`}
                         >
-                            <option value="win">Win</option>
-                            <option value="lose">Lose</option>
+                            <option value="win" className={'text-green-600'}>Win</option>
+                            <option value="lose"  className={'text-red-600'}>Lose</option>
                         </select>
                         {error && <div className="text-red-500 text-sm">{error}</div>}
                         <button
@@ -145,7 +145,7 @@ export default function SportBetCalculatorPage() {
                         />
                         <button
                             onClick={handleExportCSV}
-                            className={`w-full py-2 rounded ${theme === 'dark' ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'} text-white`}
+                            className={`w-full py-2 rounded ${theme === 'dark' ? 'bg-green-600 hover:bg-green-700' : 'bg-green-700 hover:bg-green-600'} text-white`}
                         >
                             Сохранить ставки в CSV
                         </button>

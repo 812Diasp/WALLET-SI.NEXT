@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
     LineChart,
     Line,
@@ -12,7 +12,7 @@ import {
 import { useAppSelector } from "@/hooks";
 import SpotlightCard from "@/app/components/SpotlightCard/SpotlightCard";
 import DecryptedText from "@/app/components/CryptoText/DecryptedText";
-import {DemoMenu} from "@/app/components/DemoMenuCards/DemoMenu";
+import DemoMenu from "@/app/components/DemoMenuCards/DemoMenu";
 
 // Определяем интерфейс для данных графика
 interface ChartData {
@@ -171,10 +171,10 @@ export default function Home() {
         };
     }, [theme, isTransitioning]);
     const demoItems = [
-        { link: '/pages/wallet', text: 'Wallet 👛', image: 'https://picsum.photos/600/400?random=1' },
-        { link: '/pages/portfolio', text: 'Your portfolio 💼', image: 'https://picsum.photos/600/400?random=2' },
-        { link: '/pages/calculator', text: 'Calculators 🖩', image: 'https://picsum.photos/600/400?random=3' },
-        { link: '/pages/aiassist', text: 'AI ASSISTANT 🤖', image: 'https://picsum.photos/600/400?random=4' }
+        { link: '/pages/wallet', text: 'Wallet 👛'},
+        { link: '/pages/portfolio', text: 'Your portfolio 💼'},
+        { link: '/pages/calculator', text: 'Calculators 🖩' },
+        { link: '/pages/aiassist', text: 'AI ASSISTANT 🤖'}
     ];
     // Цвета для темной и светлой темы
     const bgColor = theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50';
@@ -260,8 +260,9 @@ export default function Home() {
             {/* Features Section */}
             <section className={`relative z-10 py-12 px-4 ${sectionBgColor} transition-colors duration-500`}>
                 <div className="max-w-4xl mx-auto text-center">
-                    <h2 className="text-3xl font-bold mb-8">Why Choose SI.NEXT?</h2>
-
+                    <h2 className="text-4xl font-extrabold mb-8 text-center bg-clip-text text-transparent bg-gradient-to-r from-blue-400   to-pink-500">
+                        Why SI.NEXT?
+                    </h2>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
 
                         {[
@@ -359,7 +360,7 @@ export default function Home() {
             </section>
 
 
-            <section className={`justify-center flex ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-100'} p-8 rounded-xl transition-colors duration-300`}>
+            <section className={`justify-center flex ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'} p-8 rounded-xl transition-colors duration-300`}>
                 <DemoMenu items={demoItems} theme={theme} />
             </section>
 
