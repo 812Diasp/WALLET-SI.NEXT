@@ -13,9 +13,6 @@ export default function ChatAi() {
     const [sessionId, setSessionId] = useState<string | null>(null);
     const theme = useAppSelector((state) => state.theme.mode);
 
-    // Начальное сообщение от ИИ
-    const INITIAL_AI_MESSAGE = "I am your investing helper. How can I assist you today?";
-
     // Реф для контейнера с сообщениями
     const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -29,86 +26,130 @@ export default function ChatAi() {
     const aiMessageBg = theme === 'dark' ? 'bg-gray-700' : 'bg-gray-100';
     const inputBg = theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200';
     const buttonBg = theme === 'dark' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600';
-
+    const API = 'http://localhost:8000';
     // Функция автоскролла (внутри контейнера)
+    const INITIAL_AI_MESSAGE = "I am your investing helper. How can I assist you today?";
+
+    // автоскролл внизу
     const scrollToBottom = () => {
         if (chatContainerRef.current) {
             chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
         }
     };
 
-    // Инициализация session_id и загрузка истории
+    // 1) При маунте: инициализируем session_id
     useEffect(() => {
-        const storedSessionId = localStorage.getItem('session_id') || `sess_${Date.now()}`;
-        localStorage.setItem('session_id', storedSessionId);
-        setSessionId(storedSessionId);
+        (async () => {
+            let sid = localStorage.getItem('session_id');
 
-        const savedChat = localStorage.getItem(`chat-${storedSessionId}`);
-        if (savedChat) {
-            setChat(JSON.parse(savedChat));
-        } else {
-            const initialMessage = { role: 'assistant', content: INITIAL_AI_MESSAGE };
-            setChat([initialMessage]);
-        }
+            try {
+                if (sid) {
+                    // Проверяем существующую сессию
+                    const res = await axios.post(`${API}/check-session`, {
+                        session_id: sid, message: "",
+                    });
+
+                    if (res.data.status === 'ok') {
+                        sid = res.data.session_id;
+                    } else {
+                        sid = res.data.session_id;
+                        if (sid != null) {
+                            localStorage.setItem('session_id', sid);
+                        }
+                    }
+                } else {
+                    // Нет session_id вообще
+                    const res = await axios.post(`${API}/session`);
+                    sid = res.data.session_id;
+                    if (sid != null) {
+                        localStorage.setItem('session_id', sid);
+                    }
+                }
+
+                setSessionId(sid);
+
+                const saved = localStorage.getItem(`chat-${sid}`);
+                if (saved) {
+                    setChat(JSON.parse(saved));
+                } else {
+                    setChat([{ role: 'assistant', content: INITIAL_AI_MESSAGE }]);
+                }
+            } catch (e) {
+                console.error('Ошибка при проверке/создании сессии', e);
+            }
+        })();
     }, []);
 
-    // Сохраняем историю в localStorage при изменении
+
+    // 2) Сохраняем историю и скроллим
     useEffect(() => {
-        if (chat.length > 0 && sessionId) {
+        if (sessionId) {
             localStorage.setItem(`chat-${sessionId}`, JSON.stringify(chat));
+            scrollToBottom();
         }
-        scrollToBottom();
     }, [chat, sessionId]);
 
     const handleSend = async () => {
-        if (!input.trim()) return;
+        if (!input.trim() || !sessionId) return;
 
-        const userMessage = { role: 'user', content: input };
-        setChat((prev) => [...prev, userMessage]);
+        const userMsg = { role: 'user', content: input };
+        setChat((c) => [...c, userMsg]);
         setInput('');
         setLoading(true);
-
-        // Добавляем временный индикатор загрузки
-        const typingMessage = { role: 'assistant', content: 'loading-dots' };
-        setChat((prev) => [...prev, typingMessage]);
+        setChat((c) => [...c, { role: 'assistant', content: 'loading-dots' }]);
 
         try {
-            const res = await axios.post('http://localhost:8000/chat', {
-                message: input,
-                session_id: sessionId,
+            const res = await axios.post(
+                `${API}/chat`,
+                { session_id: sessionId, message: input },
+                { timeout: 10000 } // 10 секунд таймаут
+            );
+
+            const ai = res.data.response;
+            setChat((c) => {
+                const copy = [...c];
+                copy.pop(); // убрать loading-dots
+                copy.push({ role: 'assistant', content: ai });
+                return copy;
             });
+        } catch (err) {
+            console.error('Ошибка или таймаут:', err);
 
-            const aiResponse = res.data.response;
+            // Попробуем восстановить сессию
+            try {
+                const res = await axios.post(`${API}/session`);
+                const newSid = res.data.session_id;
 
-            // Заменяем индикатор загрузки на реальный ответ
-            setChat((prev) => {
-                const newChat = [...prev];
-                newChat.pop(); // удаляем индикатор загрузки
-                newChat.push({ role: 'assistant', content: aiResponse });
-                return newChat;
-            });
-        } catch (error) {
-            console.error(error);
-            alert('Ошибка при получении ответа');
+                if (newSid) {
+                    // Переносим историю
+                    localStorage.setItem('session_id', newSid);
+                    localStorage.setItem(`chat-${newSid}`, JSON.stringify(chat));
 
-            // Удаляем индикатор загрузки при ошибке
-            setChat((prev) => {
-                const newChat = [...prev];
-                newChat.pop();
-                return newChat;
+                    setSessionId(newSid);
+                    alert('Сессия была восстановлена из-за ошибки или таймаута.');
+                }
+            } catch (sessionErr) {
+                console.error('Не удалось восстановить сессию:', sessionErr);
+                alert('Ошибка при восстановлении сессии.');
+            }
+
+            // Убираем индикатор
+            setChat((c) => {
+                const copy = [...c];
+                copy.pop();
+                return copy;
             });
         } finally {
             setLoading(false);
         }
     };
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             handleSend();
         }
     };
-
     return (
         <>
             {/* Основной контент — чат */}

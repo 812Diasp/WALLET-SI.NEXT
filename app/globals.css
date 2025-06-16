@@ -8,22 +8,22 @@
 /*}*/
 
 .bg-black-111{
-  background-color: #111;
   color: white;
 }
 
 @keyframes gradientMove {
-  0% { background-position: 0% 50%; }
+  0% { background-position: 0 50%; }
   50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  100% { background-position: 0 50%; }
 }
 
 .modern-gradient {
   background: linear-gradient(270deg,
-  #00f0ff, /* Светло-бирюзовый */
+  #00f0ff,
   #66f2d5,
-  #0056ca, /* Розовый (iOS/Apple UI акцент) */ #1d00a1, /* Глубокий розовый */
-  #66f2f1  /* Лёгкий переход обратно к бирюзе */
+  #0056ca,
+  #1d00a1,
+  #66f2f1
   );
   background-size: 400% 400%;
   animation: gradientMove 8s ease-in-out infinite;

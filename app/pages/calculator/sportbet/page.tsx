@@ -125,7 +125,7 @@ export default function SportBetCalculatorPage() {
                         <select
                             value={result}
                             onChange={e => setResult(e.target.value as any)}
-                            className={`w-full p-2 border rounded ${textColor}`}
+                            className={`w-full p-2 border rounded text-black`}
                         >
                             <option value="win" className={'text-green-600'}>Win</option>
                             <option value="lose"  className={'text-red-600'}>Lose</option>
