@@ -187,7 +187,8 @@ export default function WalletPage() {
         secondary: "#66f2d5",
         accent1: "#0056ca",
         accent2: "#1d00a1",
-        accent3: "#66f2f1"
+        accent3: "#66f2f1",
+        expense: "#d62b2b"
     };
 
     return (
@@ -229,9 +230,9 @@ export default function WalletPage() {
                         />
                         <MetricCard
                             title="Total Expenses"
-                            value={transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0)}
+                            value={transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum - t.amount, 0)}
                             theme={theme}
-                            color={colors.secondary}
+                            color={colors.expense}
                         />
                         <MetricCard
                             title="Guaranteed Income"
@@ -267,14 +268,57 @@ export default function WalletPage() {
                     <LoanForm onSubmit={addLoan} theme={theme} />
                     {loans.map(loan => {
                         const payment = calculateLoanPayment(loan.principal, loan.interestRate, loan.termYears);
+                        const totalPayments = loan.termYears * 12 * payment;
+
+                        // Дата начала кредита
+                        const startDate = new Date(loan.startDate);
+                        const today = new Date();
+
+                        // Количество месяцев с начала кредита
+                        const monthsPassed = Math.max(
+                            0,
+                            (today.getFullYear() - startDate.getFullYear()) * 12 +
+                            today.getMonth() -
+                            startDate.getMonth()
+                        );
+
+                        const paidAmount = monthsPassed * payment;
+                        const remainingAmount = totalPayments - paidAmount;
+
+                        // Дата следующего платежа
+                        let nextPayment = new Date(startDate.setMonth(startDate.getMonth() + 1));
+                        while (nextPayment < today) {
+                            nextPayment.setMonth(nextPayment.getMonth() + 1);
+                        }
+
                         return (
-                            <div key={loan.id} className="py-2">
+                            <div key={loan.id} className="py-2 border-t mt-2 rounded-lg p-4 shadow-sm">
                                 <div className="font-semibold">{loan.name}</div>
                                 <div>Monthly: {payment.toFixed(2)} ₽</div>
+
+                                <div>Total: {loan.principal.toFixed(2)} ₽</div>
+
+                                {/* Выплачено */}
+                                <div className="text-sm">
+                                    Should be paid:{" "}
+                                    <span className="font-bold text-blue-500">{paidAmount.toFixed(2)} ₽</span>
+                                </div>
+
+                                {/* Остаток */}
+                                <div className="text-sm">
+                                    Remaining:{" "}
+                                    <span className="font-bold text-red-500">{remainingAmount.toFixed(2)} ₽</span>
+                                </div>
+
                                 <div>Term: {loan.termYears} yrs @ {loan.interestRate}%</div>
+                                <div className="text-sm text-gray-500">
+                                    Next payment: {nextPayment.toLocaleDateString()}
+                                </div>
+
                                 <button
-                                    className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-full"
-                                    onClick={()=>{deleteLoan(loan.id)}}>
+                                    className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-full mt-2"
+                                    onClick={() => deleteLoan(loan.id)}
+                                >
                                     Удалить
                                 </button>
                             </div>
@@ -398,43 +442,62 @@ const TransactionForm: FC<{ onSubmit: (tx: Omit<Transaction, 'id'>) => void; the
     };
 
     return (
-        <form onSubmit={handleSubmit} className={`flex flex-col gap-2 ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'}`}>
-            <select
-                value={type}
-                onChange={e => setType(e.target.value as any)}
-                className={`p-2 border rounded ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'}`}
-            >
-                <option value="expense">Expense</option>
-                <option value="income">Income</option>
-            </select>
-            <input
-                value={category}
-                onChange={e => setCategory(e.target.value)}
-                placeholder="Category"
-                className={`p-2 border rounded ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'}`}
-            />
-            <input
-                type="text"
-                inputMode="numeric"
-                pattern="\d*"
-                value={amount}
-                onFocus={() => {
-                    const trimmed = amount.replace(/^0+/, '');
-                    setAmount(trimmed);
-                }}
-                onChange={e => {
-                    const digits = e.target.value.replace(/\D/g, '');
-                    setAmount(digits);
-                }}
-                placeholder="Amount"
-                className={`p-2 border rounded ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'}`}
-            />
-            <input
-                type="date"
-                value={date}
-                onChange={e => setDate(e.target.value)}
-                className={`p-2 border rounded ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'}`}
-            />
+        <form
+            onSubmit={handleSubmit}
+            className={`flex flex-col gap-2 ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'}`}
+        >
+            <div>
+                <label className="block text-sm font-medium mb-1">Type</label>
+                <select
+                    value={type}
+                    onChange={(e) => setType(e.target.value as any)}
+                    className={`w-full p-2 border rounded ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'}`}
+                >
+                    <option value="expense" className={'text-red-500'}>Expense</option>
+                    <option value="income" className={'text-green-500'}>Income</option>
+                </select>
+            </div>
+
+            <div>
+                <label className="block text-sm font-medium mb-1">Category</label>
+                <input
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    placeholder="Category"
+                    className={`w-full p-2 border rounded ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'}`}
+                />
+            </div>
+
+            <div>
+                <label className="block text-sm font-medium mb-1">Amount</label>
+                <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="\d*"
+                    value={amount}
+                    onFocus={() => {
+                        const trimmed = amount.replace(/^0+/, '');
+                        setAmount(trimmed);
+                    }}
+                    onChange={(e) => {
+                        const digits = e.target.value.replace(/\D/g, '');
+                        setAmount(digits);
+                    }}
+                    placeholder="Amount"
+                    className={`w-full p-2 border rounded ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'}`}
+                />
+            </div>
+
+            <div>
+                <label className="block text-sm font-medium mb-1">Date</label>
+                <input
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    className={`w-full p-2 border rounded ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'}`}
+                />
+            </div>
+
             <button
                 type="submit"
                 className="bg-blue-600 text-white py-2 rounded mt-2"
@@ -466,31 +529,63 @@ const LoanForm: FC<{ onSubmit: (loan: Omit<Loan, 'id'>) => void; theme: string }
                 placeholder="Loan Name"
                 className={`p-2 border rounded ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'}`}
             />
+
             <label>Principal</label>
             <input
-                type="number"
+                type="text"
+                inputMode="numeric"
+                pattern="\d*"
                 value={principal}
-                onChange={e => setPrincipal(+e.target.value)}
+                onFocus={() => {
+                    const trimmed = String(principal).replace(/^0+/, '');
+                    setPrincipal(trimmed === '' ? 0 : +trimmed);
+                }}
+                onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '');
+                    setPrincipal(value === '' ? 0 : +value);
+                }}
                 placeholder="Principal"
                 className={`p-2 border rounded ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'}`}
             />
+
             <label>Annual Rate %</label>
             <input
-                type="number"
-                step="0.1"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*\.?[0-9]*"
                 value={rate}
-                onChange={e => setRate(+e.target.value)}
+                onFocus={() => {
+                    const trimmed = String(rate).replace(/^0+(\d+)/, '$1');
+                    setRate(trimmed === '' ? 0 : +trimmed);
+                }}
+                onChange={(e) => {
+                    let value = e.target.value;
+                    // Разрешаем только цифры и максимум одну точку
+                    value = value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+                    setRate(value === '' ? 0 : +value);
+                }}
                 placeholder="Annual Rate %"
                 className={`p-2 border rounded ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'}`}
             />
+
             <label>Term Years</label>
             <input
-                type="number"
+                type="text"
+                inputMode="numeric"
+                pattern="\d*"
                 value={term}
-                onChange={e => setTerm(+e.target.value)}
+                onFocus={() => {
+                    const trimmed = String(term).replace(/^0+(\d+)/, '$1');
+                    setTerm(trimmed === '' ? 0 : +trimmed);
+                }}
+                onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '');
+                    setTerm(value === '' ? 0 : +value);
+                }}
                 placeholder="Term Years"
                 className={`p-2 border rounded ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'}`}
             />
+
             <label>Data</label>
             <input
                 type="date"
@@ -498,6 +593,7 @@ const LoanForm: FC<{ onSubmit: (loan: Omit<Loan, 'id'>) => void; theme: string }
                 onChange={e => setStartDate(e.target.value)}
                 className={`p-2 border rounded ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'}`}
             />
+
             <button
                 type="submit"
                 className="bg-green-600 text-white py-2 rounded"
@@ -529,10 +625,19 @@ const GuaranteedIncomeForm: FC<{ onSubmit: (income: Omit<GuaranteedIncome, 'id'>
                 className={`p-2 border rounded ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'}`}
             />
             <input
-                type="number"
+                type="text"
+                inputMode="numeric"
+                pattern="\d*"
                 value={amount}
-                onChange={e => setAmount(+e.target.value)}
-                placeholder="Amount"
+                onFocus={() => {
+                    const trimmed = String(amount).replace(/^0+(\d+)/, '$1');
+                    setAmount(trimmed === '' ? 0 : +trimmed);
+                }}
+                onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '');
+                    setAmount(value === '' ? 0 : +value);
+                }}
+                placeholder="amount"
                 className={`p-2 border rounded ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'}`}
             />
             <select
@@ -569,6 +674,56 @@ const StockForm: FC<{ onSubmit: (stock: Omit<Stock, 'id'>) => void; theme: strin
         setPurchasePrice(0);
         setCurrentPrice(0);
     };
+    const popularTickers = {
+        sectors: {
+            energy: {
+                stocks: {
+                    ru: ['GAZP 🇷🇺', 'LKOH 🇷🇺', 'ROSN 🇷🇺', 'NVTK 🇷🇺'],
+                    foreign: ['XOM 🌍', 'CVX 🌍', 'BP 🌍', 'TOTF 🌍']
+                },
+                futures: {
+                    ru: ['Si-6.25 🇷🇺', 'Br-6.25 🇷🇺'],
+                    foreign: ['CLH5 🌍', 'NGH5 🌍']
+                }
+            },
+            finance: {
+                stocks: {
+                    ru: ['SBER 🇷🇺', 'VTBR 🇷🇺', 'MOEX 🇷🇺'],
+                    foreign: ['JPM 🌍', 'BMY 🌍', 'GS 🌍', 'HSBC 🌍']
+                },
+                etf: {
+                    ru: ['FXRB 🇷🇺', 'RSX 🇷🇺'],
+                    foreign: ['XLF 🌍', 'VFH 🌍']
+                }
+            },
+            tech: {
+                stocks: {
+                    ru: ['ALRS 🇷🇺', 'MTSS 🇷🇺'],
+                    foreign: ['AAPL 🌍', 'MSFT 🌍', 'NVDA 🌍', 'GOOGL 🌍']
+                },
+                futures: {
+                    foreign: ['ESM5 🌍', 'NQM5 🌍']
+                }
+            },
+            consumer: {
+                stocks: {
+                    ru: ['CHMF 🇷🇺', 'POLY 🇷🇺'],
+                    foreign: ['PG 🌍', 'UL 🌍', 'KO 🌍', 'PEP 🌍']
+                }
+            },
+            automotive: {
+                stocks: {
+                    ru: ['AVTO 🇷🇺'],
+                    foreign: ['TM 🌍', 'VWAGY 🌍', 'F 🌍']
+                }
+            },
+            crypto: {
+                futures: {
+                    foreign: ['BTC-25DEC25 🌍', 'ETH-25DEC25 🌍']
+                }
+            }
+        }
+    };
 
     return (
         <form onSubmit={handleSubmit} className="flex flex-col gap-2 mb-4">
@@ -580,6 +735,41 @@ const StockForm: FC<{ onSubmit: (stock: Omit<Stock, 'id'>) => void; theme: strin
                     placeholder="Stock Symbol (e.g., AAPL)"
                     className={`w-full p-2 border rounded ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'}`}
                 />
+                <div className="mt-1">
+                    <div className="text-xs text-gray-500 mb-2">Popular stocks:</div>
+
+                    <div className="space-y-3 overflow-x-auto pb-2">
+                        {Object.entries(popularTickers.sectors).map(([sector, types]) => (
+                            <div key={sector} className="border-t pt-2">
+                                <h4 className="text-sm font-medium capitalize mb-1">{sector.toUpperCase()}</h4>
+
+                                <div className="flex flex-wrap gap-1">
+                                    {Object.entries(types).map(([type, countries]) => (
+                                        <div key={type} className="mr-3">
+                                            <span className="text-xs text-gray-400">{type.toUpperCase()}</span>
+                                            <div className="flex flex-wrap gap-1 mt-1">
+                                                {Object.values(countries).flat().map((ticker) => (
+                                                    <button
+                                                        key={ticker}
+                                                        type="button"
+                                                        onClick={() => setSymbol(ticker.split(' ')[0])}
+                                                        className={`text-xs px-2 py-1 rounded whitespace-nowrap ${
+                                                            ticker.includes('🇷🇺')
+                                                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                                                                : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                                        } hover:opacity-80 transition`}
+                                                    >
+                                                        {ticker}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
             </div>
 
             <div>

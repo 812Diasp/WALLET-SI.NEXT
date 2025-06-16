@@ -15,6 +15,7 @@ interface BetCSVImporterProps {
 }
 
 // @ts-ignore
+// @ts-ignore
 export default function BetCSVImporter({ onImport, theme = 'light' }: BetCSVImporterProps) {
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const [importError, setImportError] = useState<string>('');
