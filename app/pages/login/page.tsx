@@ -4,8 +4,10 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '@/app/store';
-import { setToken, setUser } from '@/app/store/userSlice';
+
+import { setToken, setUser, setWalletId, setUserId } from '@/app/store/userSlice';
 import { toggleTheme } from '@/app/store/themeSlice';
+import {getToken} from "next-auth/jwt";
 
 // Утилитный класс для инпутов с плавным переходом тем
 const inputClass = `bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg
@@ -56,45 +58,54 @@ export default function LoginPage() {
         setLoading(true);
 
         try {
-            const res = await fetch(
-                `http://localhost:5095/api/auth/${isLogin ? 'login' : 'register'}`,
-                {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(
-                        isLogin
-                            ? { usernameOrEmail: username || email, password }
-                            : { username, email, password, confirmPassword }
-                    ),
-                }
-            );
+            const res = await fetch(`http://localhost:5095/api/auth/${isLogin ? 'login' : 'register'}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(isLogin
+                    ? { usernameOrEmail: username || email, password }
+                    : { username, email, password, confirmPassword }),
+            });
 
             const isJson = res.headers.get('content-type')?.includes('application/json');
             if (!res.ok) {
                 let message = 'Ошибка авторизации';
                 if (isJson) {
                     const data = await res.json();
-                    if (typeof data?.message === 'string') message = data.message;
+                    message = data.message || message;
                 } else {
                     const text = await res.text();
-                    if (res.status === 403 && text.toLowerCase().includes('confirm')) {
-                        message = 'Подтвердите email перед входом';
-                    } else if (text) message = text;
+                    message = text || message;
                 }
                 setError(message);
                 return;
             }
 
             const data = await res.json();
-            // Сохраняем в Redux
+
+            // Сохраняем токен и userId
             dispatch(setToken(data.token));
             dispatch(setUser({ email: data.email }));
+            dispatch(setUserId(data.userId));
 
-            // Сохраняем в localStorage для перезагрузок
+            // Получаем walletId
+            const walletRes = await fetch(`http://localhost:5095/api/wallet/${data.userId}`, {
+                headers: {
+                    'Authorization': `Bearer ${data.token}`
+                }
+            });
+
+            if (walletRes.ok) {
+                const walletData = await walletRes.json();
+                dispatch(setWalletId(walletData.Wallet?.Id || null));
+                localStorage.setItem('walletId', walletData.Wallet?.Id || '');
+            }
+
+            // Сохраняем в localStorage
             localStorage.setItem('token', data.token);
             localStorage.setItem('userId', data.userId);
 
             router.push('/pages/wallet');
+
         } catch (err: any) {
             setError(err?.message || 'Произошла непредвиденная ошибка');
         } finally {

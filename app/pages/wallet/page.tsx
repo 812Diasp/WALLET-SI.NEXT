@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { useRouter } from "next/navigation";
 import { useSelector } from "react-redux";
 import { RootState } from "@/app/store";
+import {API_URL} from "@/app/lib/api";
 
 // Утилиты
 const calculateLoanPayment = (principal: number, annualRate: number, years: number) => {
@@ -51,6 +52,10 @@ export default function WalletPage() {
     const theme = useAppSelector(state => state.theme.mode);
     const dispatch = useAppDispatch();
 
+
+
+
+
     // State с загрузкой из localStorage
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [loans, setLoans] = useState<Loan[]>([]);
@@ -58,6 +63,7 @@ export default function WalletPage() {
     const [stocks, setStocks] = useState<Stock[]>([]);
     const [balance, setBalance] = useState<number>(0);
     const [chartData, setChartData] = useState<any[]>([]);
+
 
     // Load из localStorage при монтировании
     useEffect(() => {
@@ -71,14 +77,53 @@ export default function WalletPage() {
         if (gi) setGuaranteedIncomes(JSON.parse(gi));
         if (st) setStocks(JSON.parse(st));
     }, []);
-
     // Защита маршрута
     const router = useRouter();
     const token = useSelector((state: RootState) => state.user.token);
     useEffect(() => {
         if (!token) {
             router.replace('/pages/login');
+            return;
         }
+
+        const fetchWalletData = async () => {
+            try {
+                const userId = localStorage.getItem("userId");
+                if (!userId) throw new Error("userId не найден");
+
+
+                const res = await fetch(`${API_URL}/wallet/${userId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!res.ok) throw new Error("Ошибка сети или неверный ответ от сервера");
+
+                const data = await res.json();
+
+                // Проверяем, есть ли данные в ответе
+                if (data && (data.Transactions?.length > 0 ||
+                    data.Loans?.length > 0 ||
+                    data.GuaranteedIncomes?.length > 0 ||
+                    data.Stocks?.length > 0)) {
+
+                    // Обновляем состояние
+                    setTransactions(data.Transactions || []);
+                    setLoans(data.Loans || []);
+                    setGuaranteedIncomes(data.GuaranteedIncomes || []);
+                    setStocks(data.Stocks || []);
+                } else {
+                    console.warn("Бэкенд вернул пустые данные — используем данные из localStorage");
+                }
+
+            } catch (error) {
+                console.error('Ошибка при загрузке данных кошелька:', error);
+                // Оставляем данные из localStorage, не перезаписываем
+            }
+        };
+
+        fetchWalletData();
     }, [token, router]);
 
     if (!token) {
@@ -86,6 +131,7 @@ export default function WalletPage() {
     }
 
     // Сохранение в localStorage при изменениях
+    // Сохранение в localStorage только после успешной загрузки с бэкенда или при изменениях
     useEffect(() => {
         localStorage.setItem('transactions', JSON.stringify(transactions));
     }, [transactions]);
@@ -101,7 +147,6 @@ export default function WalletPage() {
     useEffect(() => {
         localStorage.setItem('stocks', JSON.stringify(stocks));
     }, [stocks]);
-
     // Расчет баланса и данных графика
     useEffect(() => {
         let incomeSum = 0;
@@ -126,10 +171,28 @@ export default function WalletPage() {
     }, [transactions]);
 
     // Handlers
-    const addTransaction = (tx: Omit<Transaction, 'id'>) => {
-        setTransactions(prev => [...prev, { ...tx, id: uuidv4() }]);
-    };
+    const addTransaction = async (tx: TransactionFormData) => {
+        try {
+            const response = await fetch(`${API_URL}/wallet/transaction`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    ...tx,
+                    WalletId: localStorage.getItem('walletId') // Теперь это реальный ID кошелька
+                })
+            });
 
+            if (!response.ok) throw new Error('Ошибка при добавлении транзакции');
+
+            const newTx = await response.json();
+            setTransactions(prev => [...prev, newTx]);
+        } catch (error) {
+            console.error(error);
+        }
+    };
     const removeTransaction = (id: string) => {
         setTransactions(prev => prev.filter(t => t.id !== id));
     };
@@ -427,8 +490,8 @@ const Section: FC<{ title: string; children: React.ReactNode }> = ({ title, chil
         {children}
     </div>
 );
-
-const TransactionForm: FC<{ onSubmit: (tx: Omit<Transaction, 'id'>) => void; theme: string }> = ({ onSubmit, theme }) => {
+type TransactionFormData = Omit<Transaction, 'id'> & { date: string };
+const TransactionForm: FC<{  onSubmit: (tx: TransactionFormData) => void; theme: string }> = ({ onSubmit, theme }) => {
     const [type, setType] = useState<'expense' | 'income'>('expense');
     const [category, setCategory] = useState('General');
     const [amount, setAmount] = useState<string>('0');
@@ -437,7 +500,18 @@ const TransactionForm: FC<{ onSubmit: (tx: Omit<Transaction, 'id'>) => void; the
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         const numericAmount = parseInt(amount, 10) || 0;
-        onSubmit({ type, category, amount: numericAmount, date });
+
+        // Преобразуем строку даты в объект Date и делаем UTC
+        const utcDate = new Date(date);
+        utcDate.setMinutes(utcDate.getMinutes() - utcDate.getTimezoneOffset());
+
+        onSubmit({
+            type,
+            category,
+            amount: numericAmount,
+            date: utcDate.toISOString(), // Отправляем в формате ISO8601
+        });
+
         setAmount('0');
     };
 

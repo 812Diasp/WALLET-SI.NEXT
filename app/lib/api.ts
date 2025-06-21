@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:5095/api'; // порт из launchSettings.json
+export const API_URL = 'http://localhost:5095/api'; // порт из launchSettings.json
 
 const getAuthHeaders = () => {
     const token = localStorage.getItem('token');
