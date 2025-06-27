@@ -49,6 +49,8 @@ export default function LoginPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Валидация паролей при регистрации
         if (!isLogin && password !== confirmPassword) {
             setError('Пароли не совпадают');
             return;
@@ -58,6 +60,7 @@ export default function LoginPage() {
         setLoading(true);
 
         try {
+            // Отправка запроса на авторизацию/регистрацию
             const res = await fetch(`http://localhost:5095/api/auth/${isLogin ? 'login' : 'register'}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -66,6 +69,7 @@ export default function LoginPage() {
                     : { username, email, password, confirmPassword }),
             });
 
+            // Проверка ответа сервера
             const isJson = res.headers.get('content-type')?.includes('application/json');
             if (!res.ok) {
                 let message = 'Ошибка авторизации';
@@ -81,32 +85,59 @@ export default function LoginPage() {
             }
 
             const data = await res.json();
+            console.log('Auth response:', data); // Логируем ответ для отладки
 
-            // Сохраняем токен и userId
-            dispatch(setToken(data.token));
-            dispatch(setUser({ email: data.email }));
-            dispatch(setUserId(data.userId));
-
-            // Получаем walletId
-            const walletRes = await fetch(`http://localhost:5095/api/wallet/${data.userId}`, {
-                headers: {
-                    'Authorization': `Bearer ${data.token}`
-                }
-            });
-
-            if (walletRes.ok) {
-                const walletData = await walletRes.json();
-                dispatch(setWalletId(walletData.Wallet?.Id || null));
-                localStorage.setItem('walletId', walletData.Wallet?.Id || '');
+            // Проверяем наличие обязательных полей
+            if (!data.token || !data.userId) {
+                throw new Error('Неполные данные в ответе сервера');
             }
 
-            // Сохраняем в localStorage
+            // Сохраняем основные данные
+            dispatch(setToken(data.token));
+            dispatch(setUserId(data.userId));
+
+            // Пытаемся получить walletId из разных источников
+            let walletId = data.walletId || data.Wallet?.Id || null;
+
+            // Если walletId нет в основном ответе, делаем отдельный запрос
+            if (!walletId) {
+                console.log('WalletId not found in auth response, making additional request...');
+                const walletRes = await fetch(`http://localhost:5095/api/wallet/${data.userId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${data.token}`
+                    }
+                });
+
+                if (walletRes.ok) {
+                    const walletData = await walletRes.json();
+                    console.log('Wallet response:', walletData);
+                    walletId = walletData.id || walletData.Id || walletData.walletId;
+                }
+            }
+
+            // Если walletId найден, сохраняем его
+            if (walletId) {
+                dispatch(setWalletId(walletId));
+                localStorage.setItem('walletId', walletId);
+                console.log('WalletId saved:', walletId);
+            } else {
+                console.warn('WalletId not found after all attempts');
+            }
+
+            // Сохраняем email, если он есть
+            if (data.email) {
+                dispatch(setUser({ email: data.email }));
+            }
+
+            // Сохраняем остальные данные в localStorage
             localStorage.setItem('token', data.token);
             localStorage.setItem('userId', data.userId);
 
+            // Перенаправляем пользователя
             router.push('/pages/wallet');
 
         } catch (err: any) {
+            console.error('Auth error:', err);
             setError(err?.message || 'Произошла непредвиденная ошибка');
         } finally {
             setLoading(false);

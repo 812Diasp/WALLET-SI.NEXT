@@ -2,12 +2,12 @@
 import React, { FC, useState, useEffect } from 'react';
 import { useAppSelector, useAppDispatch } from '@/hooks';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import {LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend} from 'recharts';
 import { v4 as uuidv4 } from 'uuid';
 import { useRouter } from "next/navigation";
 import { useSelector } from "react-redux";
 import { RootState } from "@/app/store";
-import {API_URL} from "@/app/lib/api";
+import { API_URL } from "@/app/lib/api";
 
 // Утилиты
 const calculateLoanPayment = (principal: number, annualRate: number, years: number) => {
@@ -18,12 +18,14 @@ const calculateLoanPayment = (principal: number, annualRate: number, years: numb
 
 interface Transaction {
     id: string;
-    type: 'expense' | 'income';
+    type: '0' | '1'; // Изменено на строковые значения '0' и '1'
     category: string;
     amount: number;
     date: string;
+    walletId: string;
 }
 
+type TransactionFormData = Omit<Transaction, 'id'>;
 interface Loan {
     id: string;
     name: string;
@@ -31,6 +33,7 @@ interface Loan {
     interestRate: number;
     termYears: number;
     startDate: string;
+    walletId: string;
 }
 
 interface GuaranteedIncome {
@@ -38,6 +41,7 @@ interface GuaranteedIncome {
     source: string;
     amount: number;
     frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
+    walletId: string;
 }
 
 interface Stock {
@@ -46,40 +50,29 @@ interface Stock {
     quantity: number;
     purchasePrice: number;
     currentPrice: number;
+    walletId: string;
 }
 
 export default function WalletPage() {
     const theme = useAppSelector(state => state.theme.mode);
     const dispatch = useAppDispatch();
-
-
-
-
-
-    // State с загрузкой из localStorage
+    const router = useRouter();
+    const token = useSelector((state: RootState) => state.user.token);
+    const [timeRange, setTimeRange] = useState<'month' | 'year'>('month');
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [loans, setLoans] = useState<Loan[]>([]);
     const [guaranteedIncomes, setGuaranteedIncomes] = useState<GuaranteedIncome[]>([]);
     const [stocks, setStocks] = useState<Stock[]>([]);
     const [balance, setBalance] = useState<number>(0);
     const [chartData, setChartData] = useState<any[]>([]);
+    const [operationStatus, setOperationStatus] = useState<{
+        type: 'success' | 'error' | null;
+        message: string;
+    }>({ type: null, message: '' });
 
-
-    // Load из localStorage при монтировании
-    useEffect(() => {
-        const tx = localStorage.getItem('transactions');
-        const ln = localStorage.getItem('loans');
-        const gi = localStorage.getItem('guaranteedIncomes');
-        const st = localStorage.getItem('stocks');
-
-        if (tx) setTransactions(JSON.parse(tx));
-        if (ln) setLoans(JSON.parse(ln));
-        if (gi) setGuaranteedIncomes(JSON.parse(gi));
-        if (st) setStocks(JSON.parse(st));
-    }, []);
-    // Защита маршрута
-    const router = useRouter();
-    const token = useSelector((state: RootState) => state.user.token);
+    // Защита маршрута и загрузка данных
     useEffect(() => {
         if (!token) {
             router.replace('/pages/login');
@@ -87,10 +80,12 @@ export default function WalletPage() {
         }
 
         const fetchWalletData = async () => {
+            setIsLoading(true);
+            setError(null);
+
             try {
                 const userId = localStorage.getItem("userId");
                 if (!userId) throw new Error("userId не найден");
-
 
                 const res = await fetch(`${API_URL}/wallet/${userId}`, {
                     headers: {
@@ -101,142 +96,316 @@ export default function WalletPage() {
                 if (!res.ok) throw new Error("Ошибка сети или неверный ответ от сервера");
 
                 const data = await res.json();
+                console.log('результат получения тразыков: ', data)
+                // Преобразование данных для фронтенда
+                const transformedTransactions = (data.transactions || []).map((t: any) => ({
+                    ...t,
+                    type: t.type.toString() // Преобразуем тип в строку
+                }));
 
-                // Проверяем, есть ли данные в ответе
-                if (data && (data.Transactions?.length > 0 ||
-                    data.Loans?.length > 0 ||
-                    data.GuaranteedIncomes?.length > 0 ||
-                    data.Stocks?.length > 0)) {
+                setTransactions(transformedTransactions);
+                setLoans(data.Loans || []);
+                setGuaranteedIncomes(data.GuaranteedIncomes || []);
+                setStocks(data.Stocks || []);
 
-                    // Обновляем состояние
-                    setTransactions(data.Transactions || []);
-                    setLoans(data.Loans || []);
-                    setGuaranteedIncomes(data.GuaranteedIncomes || []);
-                    setStocks(data.Stocks || []);
-                } else {
-                    console.warn("Бэкенд вернул пустые данные — используем данные из localStorage");
-                }
+                // Сохранение в localStorage как fallback
+                localStorage.setItem('transactions', JSON.stringify(transformedTransactions));
+                localStorage.setItem('loans', JSON.stringify(data.Loans || []));
+                localStorage.setItem('guaranteedIncomes', JSON.stringify(data.GuaranteedIncomes || []));
+                localStorage.setItem('stocks', JSON.stringify(data.Stocks || []));
 
-            } catch (error) {
-                console.error('Ошибка при загрузке данных кошелька:', error);
-                // Оставляем данные из localStorage, не перезаписываем
+            } catch (err) {
+                console.error('Ошибка при загрузке данных кошелька:', err);
+                setError('Не удалось загрузить данные. Попробуйте обновить страницу.');
+
+                // Fallback: загрузка из localStorage
+                const tx = localStorage.getItem('transactions');
+                const ln = localStorage.getItem('loans');
+                const gi = localStorage.getItem('guaranteedIncomes');
+                const st = localStorage.getItem('stocks');
+
+                if (tx) setTransactions(JSON.parse(tx));
+                if (ln) setLoans(JSON.parse(ln));
+                if (gi) setGuaranteedIncomes(JSON.parse(gi));
+                if (st) setStocks(JSON.parse(st));
+            } finally {
+                setIsLoading(false);
             }
         };
 
         fetchWalletData();
     }, [token, router]);
 
-    if (!token) {
-        return null;
-    }
-
-    // Сохранение в localStorage при изменениях
-    // Сохранение в localStorage только после успешной загрузки с бэкенда или при изменениях
-    useEffect(() => {
-        localStorage.setItem('transactions', JSON.stringify(transactions));
-    }, [transactions]);
-
-    useEffect(() => {
-        localStorage.setItem('loans', JSON.stringify(loans));
-    }, [loans]);
-
-    useEffect(() => {
-        localStorage.setItem('guaranteedIncomes', JSON.stringify(guaranteedIncomes));
-    }, [guaranteedIncomes]);
-
-    useEffect(() => {
-        localStorage.setItem('stocks', JSON.stringify(stocks));
-    }, [stocks]);
     // Расчет баланса и данных графика
     useEffect(() => {
-        let incomeSum = 0;
-        let expenseSum = 0;
+        if (transactions.length === 0) return;
+
+        const groupedByMonth: Record<string, {
+            income: number;
+            expenses: number
+        }> = {};
 
         transactions.forEach(t => {
-            if (t.type === 'income') incomeSum += t.amount;
-            else expenseSum += t.amount;
+            const date = new Date(t.date);
+            const monthKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+
+            if (!groupedByMonth[monthKey]) {
+                groupedByMonth[monthKey] = { income: 0, expenses: 0 };
+            }
+
+            // Используем '0' и '1' вместо 'income' и 'expense'
+            if (t.type === '0') {
+                groupedByMonth[monthKey].income += t.amount;
+            } else {
+                groupedByMonth[monthKey].expenses += t.amount;
+            }
         });
 
-        setBalance(incomeSum - expenseSum);
+        const chartData = Object.entries(groupedByMonth)
+            .map(([month, values]) => ({
+                month,
+                income: values.income,
+                expenses: values.expenses
+            }))
+            .sort((a, b) => a.month.localeCompare(b.month));
 
-        const grouped: Record<string, { income: number; expenses: number }> = {};
-        transactions.forEach(t => {
-            const day = t.date;
-            if (!grouped[day]) grouped[day] = { income: 0, expenses: 0 };
-            grouped[day][t.type === 'income' ? 'income' : 'expenses'] += t.amount;
-        });
-
-        const data = Object.entries(grouped).map(([day, vals]) => ({ day, ...vals }));
-        setChartData(data);
+        setChartData(chartData);
     }, [transactions]);
 
     // Handlers
     const addTransaction = async (tx: TransactionFormData) => {
         try {
+            const walletId = localStorage.getItem('walletId');
+            if (!walletId) throw new Error('Wallet ID не найден');
+
+            // Формируем данные ТОЧНО как в Swagger
+            const requestData = {
+                category: tx.category,
+                amount: Number(tx.amount),
+                date: new Date(tx.date).toISOString(), // Дата в ISO-формате
+                type: tx.type, // Тип как строка!
+                walletId: walletId // GUID как строка
+            };
+
+            console.log('Отправка транзакции:', requestData);
+
             const response = await fetch(`${API_URL}/wallet/transaction`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
+                body: JSON.stringify(requestData) // Отправляем объект напрямую
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Ошибка при добавлении транзакции');
+            }
+
+            const newTx = await response.json();
+            setTransactions(prev => [...prev, {
+                ...newTx,
+                type: newTx.type === 0 ? 'income' : 'expense'
+            }]);
+
+            setOperationStatus({ type: 'success', message: 'Транзакция добавлена' });
+        } catch (error: any) {
+            console.error(error);
+            setOperationStatus({
+                type: 'error',
+                message: error.message || 'Ошибка при добавлении транзакции'
+            });
+        } finally {
+            setTimeout(() => setOperationStatus({ type: null, message: '' }), 3000);
+        }
+    };
+    const removeTransaction = async (id: string) => {
+        try {
+            const response = await fetch(`${API_URL}/wallet/transaction/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) throw new Error('Ошибка при удалении транзакции');
+
+            setTransactions(prev => prev.filter(t => t.id !== id));
+            setOperationStatus({ type: 'success', message: 'Транзакция успешно удалена' });
+        } catch (error: any) {
+            console.error(error);
+            setOperationStatus({ type: 'error', message: error.message || 'Ошибка при удалении транзакции' });
+        } finally {
+            setTimeout(() => setOperationStatus({ type: null, message: '' }), 3000);
+        }
+    };
+
+    const addLoan = async (loan: Omit<Loan, 'id'>) => {
+        try {
+            const walletId = localStorage.getItem('walletId');
+            if (!walletId) throw new Error('Wallet ID не найден');
+
+            const response = await fetch(`${API_URL}/wallet/loan`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
-                    ...tx,
-                    WalletId: localStorage.getItem('walletId') // Теперь это реальный ID кошелька
+                    ...loan,
+                    walletId
                 })
             });
 
-            if (!response.ok) throw new Error('Ошибка при добавлении транзакции');
+            if (!response.ok) throw new Error('Ошибка при добавлении займа');
 
-            const newTx = await response.json();
-            setTransactions(prev => [...prev, newTx]);
-        } catch (error) {
+            const newLoan = await response.json();
+            setLoans(prev => [...prev, newLoan]);
+            setOperationStatus({ type: 'success', message: 'Займ успешно добавлен' });
+        } catch (error: any) {
             console.error(error);
+            setOperationStatus({ type: 'error', message: error.message || 'Ошибка при добавлении займа' });
+        } finally {
+            setTimeout(() => setOperationStatus({ type: null, message: '' }), 3000);
         }
     };
-    const removeTransaction = (id: string) => {
-        setTransactions(prev => prev.filter(t => t.id !== id));
+
+    const deleteLoan = async (id: string) => {
+        try {
+            const response = await fetch(`${API_URL}/wallet/loan/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) throw new Error('Ошибка при удалении займа');
+
+            setLoans(prev => prev.filter(l => l.id !== id));
+            setOperationStatus({ type: 'success', message: 'Займ успешно удален' });
+        } catch (error: any) {
+            console.error(error);
+            setOperationStatus({ type: 'error', message: error.message || 'Ошибка при удалении займа' });
+        } finally {
+            setTimeout(() => setOperationStatus({ type: null, message: '' }), 3000);
+        }
     };
 
-    const updateTransaction = (id: string, changes: Partial<Transaction>) => {
-        setTransactions(prev => prev.map(t => t.id === id ? ({ ...t, ...changes }) : t));
+    const addGuaranteedIncome = async (income: Omit<GuaranteedIncome, 'id'>) => {
+        try {
+            const walletId = localStorage.getItem('walletId');
+            if (!walletId) throw new Error('Wallet ID не найден');
+
+            const response = await fetch(`${API_URL}/wallet/guaranteed-income`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    ...income,
+                    walletId
+                })
+            });
+
+            if (!response.ok) throw new Error('Ошибка при добавлении дохода');
+
+            const newIncome = await response.json();
+            setGuaranteedIncomes(prev => [...prev, newIncome]);
+            setOperationStatus({ type: 'success', message: 'Доход успешно добавлен' });
+        } catch (error: any) {
+            console.error(error);
+            setOperationStatus({ type: 'error', message: error.message || 'Ошибка при добавлении дохода' });
+        } finally {
+            setTimeout(() => setOperationStatus({ type: null, message: '' }), 3000);
+        }
     };
 
-    const addLoan = (loan: Omit<Loan, 'id'>) => {
-        setLoans(prev => [...prev, { ...loan, id: uuidv4() }]);
+    const deleteGuaranteedIncome = async (id: string) => {
+        try {
+            const response = await fetch(`${API_URL}/wallet/guaranteed-income/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) throw new Error('Ошибка при удалении дохода');
+
+            setGuaranteedIncomes(prev => prev.filter(g => g.id !== id));
+            setOperationStatus({ type: 'success', message: 'Доход успешно удален' });
+        } catch (error: any) {
+            console.error(error);
+            setOperationStatus({ type: 'error', message: error.message || 'Ошибка при удалении дохода' });
+        } finally {
+            setTimeout(() => setOperationStatus({ type: null, message: '' }), 3000);
+        }
     };
 
-    const deleteLoan = (id: string) => {
-        setLoans(prev => prev.filter(t => t.id !== id));
+    const addStock = async (stock: Omit<Stock, 'id'>) => {
+        try {
+            const walletId = localStorage.getItem('walletId');
+            if (!walletId) throw new Error('Wallet ID не найден');
+
+            const response = await fetch(`${API_URL}/wallet/stock`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    ...stock,
+                    walletId
+                })
+            });
+
+            if (!response.ok) throw new Error('Ошибка при добавлении акции');
+
+            const newStock = await response.json();
+            setStocks(prev => [...prev, newStock]);
+            setOperationStatus({ type: 'success', message: 'Акция успешно добавлена' });
+        } catch (error: any) {
+            console.error(error);
+            setOperationStatus({ type: 'error', message: error.message || 'Ошибка при добавлении акции' });
+        } finally {
+            setTimeout(() => setOperationStatus({ type: null, message: '' }), 3000);
+        }
     };
 
-    const addGuaranteedIncome = (income: Omit<GuaranteedIncome, 'id'>) => {
-        setGuaranteedIncomes(prev => [...prev, { ...income, id: uuidv4() }]);
-    };
+    const deleteStock = async (id: string) => {
+        try {
+            const response = await fetch(`${API_URL}/wallet/stock/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
 
-    const deleteGuaranteedIncome = (id: string) => {
-        setGuaranteedIncomes(prev => prev.filter(t => t.id !== id));
-    };
+            if (!response.ok) throw new Error('Ошибка при удалении акции');
 
-    const addStock = (stock: Omit<Stock, 'id'>) => {
-        setStocks(prev => [...prev, { ...stock, id: uuidv4() }]);
-    };
-
-    const deleteStock = (id: string) => {
-        setStocks(prev => prev.filter(t => t.id !== id));
+            setStocks(prev => prev.filter(s => s.id !== id));
+            setOperationStatus({ type: 'success', message: 'Акция успешно удалена' });
+        } catch (error: any) {
+            console.error(error);
+            setOperationStatus({ type: 'error', message: error.message || 'Ошибка при удалении акции' });
+        } finally {
+            setTimeout(() => setOperationStatus({ type: null, message: '' }), 3000);
+        }
     };
 
     const updateStockPrice = (id: string, price: number) => {
-        setStocks(prev => prev.map(s => s.id === id ? ({ ...s, currentPrice: price }) : s));
+        setStocks(prev => prev.map(s => s.id === id ? { ...s, currentPrice: price } : s));
     };
 
     // Расчет метрик
     const guaranteedIncomeTotal = guaranteedIncomes.reduce((sum, income) => {
-        // Конвертация всех доходов в месячный эквивалент
         switch (income.frequency) {
             case 'daily': return sum + income.amount * 30;
             case 'weekly': return sum + income.amount * 4;
             case 'monthly': return sum + income.amount;
             case 'yearly': return sum + income.amount / 12;
+            default: return sum;
         }
     }, 0);
 
@@ -254,8 +423,42 @@ export default function WalletPage() {
         expense: "#d62b2b"
     };
 
+    if (!token) {
+        return null;
+    }
+
+    if (isLoading) {
+        return (
+            <div className={`min-h-screen flex items-center justify-center ${theme === 'dark' ? 'bg-gray-900' : 'bg-white'}`}>
+                <div className="text-xl">Загрузка данных кошелька...</div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className={`min-h-screen flex items-center justify-center ${theme === 'dark' ? 'bg-gray-900' : 'bg-white'}`}>
+                <div className="text-xl text-red-500">{error}</div>
+            </div>
+        );
+    }
+
     return (
         <div className={`${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'} p-6 space-y-8 transition-colors duration-500 max-w-6xl mx-auto mt-25`}>
+            {operationStatus.type && (
+                <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`fixed top-4 right-4 p-4 rounded-lg z-50 ${
+                        operationStatus.type === 'success'
+                            ? 'bg-green-500 text-white'
+                            : 'bg-red-500 text-white'
+                    }`}
+                >
+                    {operationStatus.message}
+                </motion.div>
+            )}
+
             <div className={'max-w-6xl mx-auto'}>
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-3xl font-bold">
                     Balance: {balance.toFixed(2)} ₽
@@ -267,19 +470,34 @@ export default function WalletPage() {
 
                 <Section title="History">
                     <AnimatePresence>
-                        {transactions.map(tx => (
-                            <motion.div key={tx.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex justify-between py-2">
-                                <div>
-                                    <span>{tx.date}</span> · <span>{tx.category}</span>
-                                </div>
-                                <div className="flex gap-2">
-                                    <span className={tx.type === 'expense' ? 'text-red-500' : 'text-green-500'}>
-                                        {tx.amount} ₽
-                                    </span>
-                                    <button onClick={() => removeTransaction(tx.id)}>×</button>
-                                </div>
-                            </motion.div>
-                        ))}
+                        {transactions.map(tx => {
+                            const date = new Date(tx.date);
+                            const formattedDate = date.toLocaleDateString('ru-RU', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric'
+                            });
+
+                            return (
+                                <motion.div
+                                    key={tx.id}
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="flex justify-between py-2"
+                                >
+                                    <div>
+                                        <span>{formattedDate}</span> · <span>{tx.category}</span>
+                                    </div>
+                                    <div className="flex gap-2">
+                        <span className={tx.type === '1' ? 'text-red-500' : 'text-green-500'}>
+                            {tx.type === '1' ? '-' : '+'}{tx.amount.toLocaleString('ru-RU')} ₽
+                        </span>
+                                        <button onClick={() => removeTransaction(tx.id)}>×</button>
+                                    </div>
+                                </motion.div>
+                            );
+                        })}
                     </AnimatePresence>
                 </Section>
 
@@ -287,15 +505,17 @@ export default function WalletPage() {
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <MetricCard
                             title="Total Income"
-                            value={transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0)}
+                            value={transactions.filter(t => t.type === '0').reduce((sum, t) => sum + t.amount, 0)}
                             theme={theme}
                             color={colors.primary}
+
                         />
                         <MetricCard
                             title="Total Expenses"
-                            value={transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum - t.amount, 0)}
+                            value={transactions.filter(t => t.type === '1').reduce((sum, t) => sum + t.amount, 0)}
                             theme={theme}
                             color={colors.expense}
+
                         />
                         <MetricCard
                             title="Guaranteed Income"
@@ -312,18 +532,98 @@ export default function WalletPage() {
                     </div>
                 </Section>
 
+                    <div className="flex gap-2 mb-4">
+                        <button
+                            onClick={() => setTimeRange('month')}
+                            className={`px-4 py-2 rounded ${timeRange === 'month' ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}
+                        >
+                            By Month
+                        </button>
+                        <button
+                            onClick={() => setTimeRange('year')}
+                            className={`px-4 py-2 rounded ${timeRange === 'year' ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}
+                        >
+                            By Year
+                        </button>
+                    </div>
+
+
+
                 <Section title="Income & Expenses Chart">
-                    <div style={{ width: '100%', height: 300 }}>
+                    <div style={{ width: '100%', height: 400 }}>
                         <ResponsiveContainer>
-                            <LineChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="day" />
-                                <YAxis />
-                                <Tooltip />
-                                <Line type="monotone" dataKey="income" stroke={colors.primary} />
-                                <Line type="monotone" dataKey="expenses" stroke={colors.secondary} />
+                            <LineChart
+                                data={chartData}
+                                margin={{ top: 20, right: 30, left: 20, bottom: 30 }}
+                            >
+                                <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#555' : '#eee'} />
+                                <XAxis
+                                    dataKey="month"
+                                    tick={{ fill: theme === 'dark' ? '#fff' : '#333' }}
+                                    tickFormatter={(month) => {
+                                        const [year, m] = month.split('-');
+                                        return `${m}/${year.slice(2)}`;
+                                    }}
+                                />
+                                <YAxis tick={{ fill: theme === 'dark' ? '#fff' : '#333' }} />
+                                <Tooltip
+                                    contentStyle={{
+                                        backgroundColor: theme === 'dark' ? '#333' : '#fff',
+                                        borderColor: theme === 'dark' ? '#555' : '#ddd'
+                                    }}
+                                    formatter={(value: number) => [`${value} ₽`, value > 0 ? 'Income' : 'Expenses']}
+                                    labelFormatter={(month) => {
+                                        const [year, m] = month.split('-');
+                                        return `Month: ${m}/${year}`;
+                                    }}
+                                />
+                                <Legend />
+                                <Line
+                                    type="monotone"
+                                    dataKey="income"
+                                    stroke="#4CAF50"
+                                    strokeWidth={2}
+                                    dot={{ r: 4 }}
+                                    activeDot={{ r: 6 }}
+                                    name="Income"
+                                />
+                                <Line
+                                    type="monotone"
+                                    dataKey="expenses"
+                                    stroke="#F44336"
+                                    strokeWidth={2}
+                                    dot={{ r: 4 }}
+                                    activeDot={{ r: 6 }}
+                                    name="Expenses"
+                                />
                             </LineChart>
                         </ResponsiveContainer>
+                    </div>
+
+                    {/* Дополнительная статистика */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                        <div className={`p-4 rounded-lg ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                            <h3 className="font-semibold">Total Income</h3>
+                            <p className="text-green-500 text-xl">
+                                {chartData.reduce((sum, item) => sum + item.income, 0).toFixed(2)} ₽
+                            </p>
+                        </div>
+                        <div className={`p-4 rounded-lg ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                            <h3 className="font-semibold">Total Expenses</h3>
+                            <p className="text-red-500 text-xl">
+                                {chartData.reduce((sum, item) => sum + item.expenses, 0).toFixed(2)} ₽
+                            </p>
+                        </div>
+                        <div className={`p-4 rounded-lg ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                            <h3 className="font-semibold">Balance</h3>
+                            <p className={
+                                chartData.reduce((sum, item) => sum + item.income - item.expenses, 0) >= 0
+                                    ? 'text-green-500'
+                                    : 'text-red-500'
+                            }>
+                                {chartData.reduce((sum, item) => sum + item.income - item.expenses, 0).toFixed(2)} ₽
+                            </p>
+                        </div>
                     </div>
                 </Section>
 
@@ -490,9 +790,9 @@ const Section: FC<{ title: string; children: React.ReactNode }> = ({ title, chil
         {children}
     </div>
 );
-type TransactionFormData = Omit<Transaction, 'id'> & { date: string };
-const TransactionForm: FC<{  onSubmit: (tx: TransactionFormData) => void; theme: string }> = ({ onSubmit, theme }) => {
-    const [type, setType] = useState<'expense' | 'income'>('expense');
+
+const TransactionForm: FC<{ onSubmit: (tx: TransactionFormData) => void; theme: string }> = ({ onSubmit, theme }) => {
+    const [type, setType] = useState<'0' | '1'>('1'); // '0' - income, '1' - expense
     const [category, setCategory] = useState('General');
     const [amount, setAmount] = useState<string>('0');
     const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
@@ -509,7 +809,8 @@ const TransactionForm: FC<{  onSubmit: (tx: TransactionFormData) => void; theme:
             type,
             category,
             amount: numericAmount,
-            date: utcDate.toISOString(), // Отправляем в формате ISO8601
+            date: utcDate.toISOString(),
+            walletId: localStorage.getItem('walletId') || ''
         });
 
         setAmount('0');
@@ -524,14 +825,15 @@ const TransactionForm: FC<{  onSubmit: (tx: TransactionFormData) => void; theme:
                 <label className="block text-sm font-medium mb-1">Type</label>
                 <select
                     value={type}
-                    onChange={(e) => setType(e.target.value as any)}
+                    onChange={(e) => setType(e.target.value as '0' | '1')}
                     className={`w-full p-2 border rounded ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'}`}
                 >
-                    <option value="expense" className={'text-red-500'}>Expense</option>
-                    <option value="income" className={'text-green-500'}>Income</option>
+                    <option value="0" className={'text-green-500'}>Income</option>
+                    <option value="1" className={'text-red-500'}>Expense</option>
                 </select>
             </div>
 
+            {/* Остальные поля формы остаются без изменений */}
             <div>
                 <label className="block text-sm font-medium mb-1">Category</label>
                 <input
@@ -582,6 +884,7 @@ const TransactionForm: FC<{  onSubmit: (tx: TransactionFormData) => void; theme:
     );
 };
 
+
 const LoanForm: FC<{ onSubmit: (loan: Omit<Loan, 'id'>) => void; theme: string }> = ({ onSubmit,theme }) => {
     const [name, setName] = useState('');
     const [principal, setPrincipal] = useState(0);
@@ -591,7 +894,14 @@ const LoanForm: FC<{ onSubmit: (loan: Omit<Loan, 'id'>) => void; theme: string }
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSubmit({ name, principal, interestRate: rate, termYears: term, startDate });
+        onSubmit({
+            name,
+            principal,
+            interestRate: rate,
+            termYears: term,
+            startDate,
+            walletId: localStorage.getItem('walletId') || '' // Добавлено для бекенда
+        });
         setName('');
     };
 
@@ -685,7 +995,12 @@ const GuaranteedIncomeForm: FC<{ onSubmit: (income: Omit<GuaranteedIncome, 'id'>
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSubmit({ source, amount, frequency });
+        onSubmit({
+            source,
+            amount,
+            frequency,
+            walletId: localStorage.getItem('walletId') || '' // Добавлено для бекенда
+        });
         setSource('');
         setAmount(0);
     };
@@ -740,14 +1055,6 @@ const StockForm: FC<{ onSubmit: (stock: Omit<Stock, 'id'>) => void; theme: strin
     const [purchasePrice, setPurchasePrice] = useState(0);
     const [currentPrice, setCurrentPrice] = useState(0);
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        onSubmit({ symbol, quantity, purchasePrice, currentPrice });
-        setSymbol('');
-        setQuantity(0);
-        setPurchasePrice(0);
-        setCurrentPrice(0);
-    };
     const popularTickers = {
         sectors: {
             energy: {
@@ -798,7 +1105,23 @@ const StockForm: FC<{ onSubmit: (stock: Omit<Stock, 'id'>) => void; theme: strin
             }
         }
     };
+// Добавленная функция handleSubmit
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        onSubmit({
+            symbol,
+            quantity,
+            purchasePrice,
+            currentPrice,
+            walletId: localStorage.getItem('walletId') || ''
+        });
 
+        // Сброс полей после отправки
+        setSymbol('');
+        setQuantity(0);
+        setPurchasePrice(0);
+        setCurrentPrice(0);
+    };
     return (
         <form onSubmit={handleSubmit} className="flex flex-col gap-2 mb-4">
             <div>
