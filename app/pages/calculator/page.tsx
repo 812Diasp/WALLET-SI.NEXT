@@ -44,13 +44,13 @@ export default function CalculatorPage() {
             title: "Investing Calculator (Dividends)",
             desc: "Estimate investment returns based on dividend yields and growth",
             riscLevel: "Medium",
-            link:'/pages/calculator/investment'
+            link:'/pages/calculator/invest'
         },
         {
             title: "Budget Planner (AI utility)",
             desc: "Smart budget planning tool powered by AI to manage personal finances efficiently",
             riscLevel: "Low",
-            link:'/pages/calculator/budget-planner'
+            link:'/pages/calculator/planner'
         }
     ];
 

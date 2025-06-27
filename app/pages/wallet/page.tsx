@@ -58,7 +58,7 @@ export default function WalletPage() {
     const dispatch = useAppDispatch();
     const router = useRouter();
     const token = useSelector((state: RootState) => state.user.token);
-    const [timeRange, setTimeRange] = useState<'month' | 'year'>('month');
+    const [timeRange, setTimeRange] = useState<'day' | 'month' | 'year'>('day');
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -140,37 +140,41 @@ export default function WalletPage() {
     useEffect(() => {
         if (transactions.length === 0) return;
 
-        const groupedByMonth: Record<string, {
-            income: number;
-            expenses: number
-        }> = {};
+        let groupedData: Record<string, { income: number; expenses: number }> = {};
 
         transactions.forEach(t => {
             const date = new Date(t.date);
-            const monthKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+            let key: string;
 
-            if (!groupedByMonth[monthKey]) {
-                groupedByMonth[monthKey] = { income: 0, expenses: 0 };
+            if (timeRange === 'day') {
+                key = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+            } else if (timeRange === 'month') {
+                key = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+            } else { // year
+                key = `${date.getFullYear()}`;
             }
 
-            // Используем '0' и '1' вместо 'income' и 'expense'
+            if (!groupedData[key]) {
+                groupedData[key] = { income: 0, expenses: 0 };
+            }
+
             if (t.type === '0') {
-                groupedByMonth[monthKey].income += t.amount;
+                groupedData[key].income += t.amount;
             } else {
-                groupedByMonth[monthKey].expenses += t.amount;
+                groupedData[key].expenses += t.amount;
             }
         });
 
-        const chartData = Object.entries(groupedByMonth)
-            .map(([month, values]) => ({
-                month,
+        const chartData = Object.entries(groupedData)
+            .map(([period, values]) => ({
+                period,
                 income: values.income,
                 expenses: values.expenses
             }))
-            .sort((a, b) => a.month.localeCompare(b.month));
+            .sort((a, b) => a.period.localeCompare(b.period));
 
         setChartData(chartData);
-    }, [transactions]);
+    }, [transactions, timeRange]);
 
     // Handlers
     const addTransaction = async (tx: TransactionFormData) => {
@@ -532,24 +536,28 @@ export default function WalletPage() {
                     </div>
                 </Section>
 
-                    <div className="flex gap-2 mb-4">
-                        <button
-                            onClick={() => setTimeRange('month')}
-                            className={`px-4 py-2 rounded ${timeRange === 'month' ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}
-                        >
-                            By Month
-                        </button>
-                        <button
-                            onClick={() => setTimeRange('year')}
-                            className={`px-4 py-2 rounded ${timeRange === 'year' ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}
-                        >
-                            By Year
-                        </button>
-                    </div>
+                <div className="flex gap-2 mb-4">
+                    <button
+                        onClick={() => setTimeRange('day')}
+                        className={`px-4 py-2 rounded ${timeRange === 'day' ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}
+                    >
+                        По дням
+                    </button>
+                    <button
+                        onClick={() => setTimeRange('month')}
+                        className={`px-4 py-2 rounded ${timeRange === 'month' ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}
+                    >
+                        По месяцам
+                    </button>
+                    <button
+                        onClick={() => setTimeRange('year')}
+                        className={`px-4 py-2 rounded ${timeRange === 'year' ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}
+                    >
+                        По годам
+                    </button>
+                </div>
 
-
-
-                <Section title="Income & Expenses Chart">
+                <Section title="График доходов и расходов">
                     <div style={{ width: '100%', height: 400 }}>
                         <ResponsiveContainer>
                             <LineChart
@@ -558,26 +566,48 @@ export default function WalletPage() {
                             >
                                 <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#555' : '#eee'} />
                                 <XAxis
-                                    dataKey="month"
+                                    dataKey="period"
                                     tick={{ fill: theme === 'dark' ? '#fff' : '#333' }}
-                                    tickFormatter={(month) => {
-                                        const [year, m] = month.split('-');
-                                        return `${m}/${year.slice(2)}`;
+                                    tickFormatter={(period) => {
+                                        if (timeRange === 'day') {
+                                            const [year, month, day] = period.split('-');
+                                            return `${day}.${month}`;
+                                        } else if (timeRange === 'month') {
+                                            const [year, month] = period.split('-');
+                                            return `${month}.${year.slice(2)}`;
+                                        } else {
+                                            return period;
+                                        }
                                     }}
                                 />
-                                <YAxis tick={{ fill: theme === 'dark' ? '#fff' : '#333' }} />
+                                <YAxis
+                                    tick={{ fill: theme === 'dark' ? '#fff' : '#333' }}
+                                    tickFormatter={(value) => `${value.toLocaleString('ru-RU')} ₽`}
+                                />
                                 <Tooltip
                                     contentStyle={{
                                         backgroundColor: theme === 'dark' ? '#333' : '#fff',
                                         borderColor: theme === 'dark' ? '#555' : '#ddd'
                                     }}
-                                    formatter={(value: number) => [`${value} ₽`, value > 0 ? 'Income' : 'Expenses']}
-                                    labelFormatter={(month) => {
-                                        const [year, m] = month.split('-');
-                                        return `Month: ${m}/${year}`;
+                                    formatter={(value: number, name: string) => [
+                                        `${value.toLocaleString('ru-RU')} ₽`,
+                                        name === 'income' ? 'Доходы' : 'Расходы'
+                                    ]}
+                                    labelFormatter={(period) => {
+                                        if (timeRange === 'day') {
+                                            const [year, month, day] = period.split('-');
+                                            return `Дата: ${day}.${month}.${year}`;
+                                        } else if (timeRange === 'month') {
+                                            const [year, month] = period.split('-');
+                                            return `Месяц: ${month}.${year}`;
+                                        } else {
+                                            return `Год: ${period}`;
+                                        }
                                     }}
                                 />
-                                <Legend />
+                                <Legend
+                                    formatter={(value) => value === 'income' ? 'Доходы' : 'Расходы'}
+                                />
                                 <Line
                                     type="monotone"
                                     dataKey="income"
@@ -585,7 +615,7 @@ export default function WalletPage() {
                                     strokeWidth={2}
                                     dot={{ r: 4 }}
                                     activeDot={{ r: 6 }}
-                                    name="Income"
+                                    name="Доходы"
                                 />
                                 <Line
                                     type="monotone"
@@ -594,34 +624,33 @@ export default function WalletPage() {
                                     strokeWidth={2}
                                     dot={{ r: 4 }}
                                     activeDot={{ r: 6 }}
-                                    name="Expenses"
+                                    name="Расходы"
                                 />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
 
-                    {/* Дополнительная статистика */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                         <div className={`p-4 rounded-lg ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}`}>
-                            <h3 className="font-semibold">Total Income</h3>
+                            <h3 className="font-semibold">Общие доходы</h3>
                             <p className="text-green-500 text-xl">
-                                {chartData.reduce((sum, item) => sum + item.income, 0).toFixed(2)} ₽
+                                {chartData.reduce((sum, item) => sum + item.income, 0).toLocaleString('ru-RU')} ₽
                             </p>
                         </div>
                         <div className={`p-4 rounded-lg ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}`}>
-                            <h3 className="font-semibold">Total Expenses</h3>
+                            <h3 className="font-semibold">Общие расходы</h3>
                             <p className="text-red-500 text-xl">
-                                {chartData.reduce((sum, item) => sum + item.expenses, 0).toFixed(2)} ₽
+                                {chartData.reduce((sum, item) => sum + item.expenses, 0).toLocaleString('ru-RU')} ₽
                             </p>
                         </div>
                         <div className={`p-4 rounded-lg ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}`}>
-                            <h3 className="font-semibold">Balance</h3>
+                            <h3 className="font-semibold">Баланс</h3>
                             <p className={
                                 chartData.reduce((sum, item) => sum + item.income - item.expenses, 0) >= 0
                                     ? 'text-green-500'
                                     : 'text-red-500'
                             }>
-                                {chartData.reduce((sum, item) => sum + item.income - item.expenses, 0).toFixed(2)} ₽
+                                {chartData.reduce((sum, item) => sum + item.income - item.expenses, 0).toLocaleString('ru-RU')} ₽
                             </p>
                         </div>
                     </div>
