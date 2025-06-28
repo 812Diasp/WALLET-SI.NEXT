@@ -172,7 +172,7 @@ export default function Home() {
     }, [theme, isTransitioning]);
     const demoItems = [
         { link: '/pages/wallet', text: 'Wallet 👛'},
-        { link: '/pages/portfolio', text: 'Your portfolio 💼'},
+        // { link: '/pages/portfolio', text: 'Your portfolio 💼'},
         { link: '/pages/calculator', text: 'Calculators 🖩' },
         { link: '/pages/aiassist', text: 'AI ASSISTANT 🤖'}
     ];

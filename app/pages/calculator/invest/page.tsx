@@ -82,6 +82,23 @@ export default function InvestmentCalculatorPage() {
         localStorage.setItem('investment-calculations', JSON.stringify(savedCalculations));
     }, [savedCalculations]);
 
+    // Handle number input changes
+    const handleNumberInputChange = (
+        e: React.ChangeEvent<HTMLInputElement>,
+        setState: React.Dispatch<React.SetStateAction<any>>,
+        field: string
+    ) => {
+        const value = e.target.value;
+        if (value === '') {
+            setState((prev: any) => ({ ...prev, [field]: 0 }));
+        } else {
+            const numValue = value.startsWith('0') && value.length > 1 && !value.includes('.')
+                ? Number(value.substring(1))
+                : Number(value);
+            setState((prev: any) => ({ ...prev, [field]: numValue }));
+        }
+    };
+
     // Calculate dividend income
     const calculateDividend = () => {
         const { shares, dividendPerShare, frequency } = dividendInputs;
@@ -203,11 +220,8 @@ export default function InvestmentCalculatorPage() {
                                 <label className="block mb-1">Количество акций</label>
                                 <input
                                     type="number"
-                                    value={dividendInputs.shares}
-                                    onChange={(e) => setDividendInputs({
-                                        ...dividendInputs,
-                                        shares: Number(e.target.value)
-                                    })}
+                                    value={dividendInputs.shares || ''}
+                                    onChange={(e) => handleNumberInputChange(e, setDividendInputs, 'shares')}
                                     className={`w-full p-2 border rounded ${inputBg}`}
                                 />
                             </div>
@@ -217,11 +231,8 @@ export default function InvestmentCalculatorPage() {
                                 <input
                                     type="number"
                                     step="0.01"
-                                    value={dividendInputs.dividendPerShare}
-                                    onChange={(e) => setDividendInputs({
-                                        ...dividendInputs,
-                                        dividendPerShare: Number(e.target.value)
-                                    })}
+                                    value={dividendInputs.dividendPerShare || ''}
+                                    onChange={(e) => handleNumberInputChange(e, setDividendInputs, 'dividendPerShare')}
                                     className={`w-full p-2 border rounded ${inputBg}`}
                                 />
                             </div>
@@ -271,11 +282,8 @@ export default function InvestmentCalculatorPage() {
                                 <label className="block mb-1">Начальная сумма ($)</label>
                                 <input
                                     type="number"
-                                    value={compoundInputs.initialAmount}
-                                    onChange={(e) => setCompoundInputs({
-                                        ...compoundInputs,
-                                        initialAmount: Number(e.target.value)
-                                    })}
+                                    value={compoundInputs.initialAmount || ''}
+                                    onChange={(e) => handleNumberInputChange(e, setCompoundInputs, 'initialAmount')}
                                     className={`w-full p-2 border rounded ${inputBg}`}
                                 />
                             </div>
@@ -284,11 +292,8 @@ export default function InvestmentCalculatorPage() {
                                 <label className="block mb-1">Ежемесячное пополнение ($)</label>
                                 <input
                                     type="number"
-                                    value={compoundInputs.monthlyContribution}
-                                    onChange={(e) => setCompoundInputs({
-                                        ...compoundInputs,
-                                        monthlyContribution: Number(e.target.value)
-                                    })}
+                                    value={compoundInputs.monthlyContribution || ''}
+                                    onChange={(e) => handleNumberInputChange(e, setCompoundInputs, 'monthlyContribution')}
                                     className={`w-full p-2 border rounded ${inputBg}`}
                                 />
                             </div>
@@ -298,11 +303,8 @@ export default function InvestmentCalculatorPage() {
                                 <input
                                     type="number"
                                     step="0.1"
-                                    value={compoundInputs.annualRate}
-                                    onChange={(e) => setCompoundInputs({
-                                        ...compoundInputs,
-                                        annualRate: Number(e.target.value)
-                                    })}
+                                    value={compoundInputs.annualRate || ''}
+                                    onChange={(e) => handleNumberInputChange(e, setCompoundInputs, 'annualRate')}
                                     className={`w-full p-2 border rounded ${inputBg}`}
                                 />
                             </div>
@@ -311,11 +313,8 @@ export default function InvestmentCalculatorPage() {
                                 <label className="block mb-1">Срок инвестирования (лет)</label>
                                 <input
                                     type="number"
-                                    value={compoundInputs.years}
-                                    onChange={(e) => setCompoundInputs({
-                                        ...compoundInputs,
-                                        years: Number(e.target.value)
-                                    })}
+                                    value={compoundInputs.years || ''}
+                                    onChange={(e) => handleNumberInputChange(e, setCompoundInputs, 'years')}
                                     className={`w-full p-2 border rounded ${inputBg}`}
                                 />
                             </div>
@@ -345,11 +344,8 @@ export default function InvestmentCalculatorPage() {
                                 <input
                                     type="number"
                                     step="0.01"
-                                    value={stockGrowthInputs.initialPrice}
-                                    onChange={(e) => setStockGrowthInputs({
-                                        ...stockGrowthInputs,
-                                        initialPrice: Number(e.target.value)
-                                    })}
+                                    value={stockGrowthInputs.initialPrice || ''}
+                                    onChange={(e) => handleNumberInputChange(e, setStockGrowthInputs, 'initialPrice')}
                                     className={`w-full p-2 border rounded ${inputBg}`}
                                 />
                             </div>
@@ -359,11 +355,8 @@ export default function InvestmentCalculatorPage() {
                                 <input
                                     type="number"
                                     step="0.01"
-                                    value={stockGrowthInputs.finalPrice}
-                                    onChange={(e) => setStockGrowthInputs({
-                                        ...stockGrowthInputs,
-                                        finalPrice: Number(e.target.value)
-                                    })}
+                                    value={stockGrowthInputs.finalPrice || ''}
+                                    onChange={(e) => handleNumberInputChange(e, setStockGrowthInputs, 'finalPrice')}
                                     className={`w-full p-2 border rounded ${inputBg}`}
                                 />
                             </div>
@@ -372,11 +365,8 @@ export default function InvestmentCalculatorPage() {
                                 <label className="block mb-1">Количество акций</label>
                                 <input
                                     type="number"
-                                    value={stockGrowthInputs.shares}
-                                    onChange={(e) => setStockGrowthInputs({
-                                        ...stockGrowthInputs,
-                                        shares: Number(e.target.value)
-                                    })}
+                                    value={stockGrowthInputs.shares || ''}
+                                    onChange={(e) => handleNumberInputChange(e, setStockGrowthInputs, 'shares')}
                                     className={`w-full p-2 border rounded ${inputBg}`}
                                 />
                             </div>
@@ -385,11 +375,8 @@ export default function InvestmentCalculatorPage() {
                                 <label className="block mb-1">Период владения (лет)</label>
                                 <input
                                     type="number"
-                                    value={stockGrowthInputs.years}
-                                    onChange={(e) => setStockGrowthInputs({
-                                        ...stockGrowthInputs,
-                                        years: Number(e.target.value)
-                                    })}
+                                    value={stockGrowthInputs.years || ''}
+                                    onChange={(e) => handleNumberInputChange(e, setStockGrowthInputs, 'years')}
                                     className={`w-full p-2 border rounded ${inputBg}`}
                                 />
                             </div>
